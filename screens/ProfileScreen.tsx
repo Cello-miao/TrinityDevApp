@@ -1,0 +1,333 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { User, Order } from '../types';
+import { logout } from '../lib/auth';
+import { useFocusEffect } from '@react-navigation/native';
+
+export default function ProfileScreen({ navigation }: any) {
+  const [user, setUser] = useState<User | null>(null);
+  const [orderCount, setOrderCount] = useState(0);
+
+  const loadUserData = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        setUser(JSON.parse(userStr));
+      }
+      
+      // Load order count
+      const ordersStr = await AsyncStorage.getItem('orders');
+      if (ordersStr) {
+        const orders: Order[] = JSON.parse(ordersStr);
+        setOrderCount(orders.length);
+      }
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        onPress: async () => {
+          await logout();
+          navigation.replace('Login');
+        },
+      },
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+
+        {/* User Info Card */}
+        <View style={styles.userCard}>
+          <View style={styles.userHeader}>
+            <View style={styles.avatar}>
+              <Ionicons name="person-outline" size={40} color="#fff" />
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{user?.name || 'xinxin'}</Text>
+              <View style={styles.emailContainer}>
+                <Ionicons name="mail-outline" size={16} color="#cbd5e1" />
+                <Text style={styles.userEmail}>{user?.email || 'xinxin@123.com'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{orderCount}</Text>
+              <Text style={styles.statLabel}>Orders</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statLabel}>Favorites</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statLabel}>Coupons</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Menu Section */}
+        <View style={styles.menuSection}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Orders')}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="cube-outline" size={24} color="#3b82f6" />
+              </View>
+              <Text style={styles.menuText}>My Orders</Text>
+            </View>
+            <View style={styles.menuRight}>
+              {orderCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{orderCount}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: '#fce7f3' }]}>
+                <Ionicons name="bag-outline" size={24} color="#ec4899" />
+              </View>
+              <Text style={styles.menuText}>My Favorites</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: '#fee2e2' }]}>
+                <Ionicons name="heart-outline" size={24} color="#ef4444" />
+              </View>
+              <Text style={styles.menuText}>Following</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: '#f3f4f6' }]}>
+                <Ionicons name="settings-outline" size={24} color="#6b7280" />
+              </View>
+              <Text style={styles.menuText}>Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Second Menu Section */}
+        <View style={styles.menuSection}>
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Text style={styles.menuText}>Help & Feedback</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <Text style={styles.menuText}>About Us</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#64748b" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Version */}
+        <Text style={styles.versionText}>Version 1.0.0</Text>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  userCard: {
+    backgroundColor: '#475569',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+  },
+  userHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#64748b',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userInfo: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 6,
+  },
+  emailContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#cbd5e1',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#5a6c7d',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#cbd5e1',
+  },
+  menuSection: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuText: {
+    fontSize: 16,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  menuRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  badge: {
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 8,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 24,
+  },
+});

@@ -1,0 +1,78 @@
+name: Mirror to Epitech Organization
+
+on:
+  # 1. Manual Trigger: Can be triggered manually from GitHub Actions tab
+  workflow_dispatch:
+  
+  # 2. Auto Sync on Push: Triggers when code is pushed to dev or prod
+  push:
+    branches:
+      - dev
+  
+  # 3. Periodic Synchronization: Runs every 2 days to ensure total alignment
+  schedule:
+    - cron: '0 0 */2 * *'
+    
+  # 4. Pipeline-Driven Synchronization: Triggered when other workflows finish
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    name: Mirror All Branches
+    runs-on: ubuntu-latest
+    
+    # Logic: Run on manual trigger, push, schedule, or after successful workflow runs
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_run' && 
+       github.event.workflow_run.conclusion == 'success' && 
+       github.event.workflow_run.head_branch == 'dev')
+
+    steps:
+      # Use fetch-depth: 0 to retrieve all branches and full commit history
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git Automation Bot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and Map All Remote Branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_MIRROR_TOKEN }}
+        run: |
+          # Set origin URL with token for authenticated fetching
+          git remote set-url origin https://oauth2:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          git fetch --all
+          
+          # Iterate through all remote branches to create local tracking branches.
+          # This is required because 'git push --mirror' only pushes local refs.
+          for branch in $(git branch -r | grep "origin/" | grep -v HEAD | sed 's|origin/||'); do
+            git branch "$branch" "origin/$branch" 2>/dev/null || true
+          done
+
+      - name: Execute Full Mirror Push
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_MIRROR_TOKEN }}
+          TARGET_REPO: EpitechMscInternationalPromo2027/I-DEV-801-INT-8-1-trinitydevapp-1
+        run: |
+          # Add the destination organization repository as a remote
+          git remote add org-mirror https://oauth2:${GITHUB_TOKEN}@github.com/${TARGET_REPO}.git
+          
+          # Push all branches and tags (but don't delete extra branches in target repo)
+          # This avoids the error when target repo has a 'main' branch that we don't have
+          git push --all org-mirror --force --verbose
+          git push --tags org-mirror --force --verbose || true
