@@ -54,9 +54,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_MIRROR_TOKEN }}
         run: |
-          # Set origin URL with token for authenticated fetching
-          git remote set-url origin https://oauth2:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
-          git fetch --all
+          # Fetch all branches without changing remote URL
+          git fetch origin --all
           
           # Iterate through all remote branches to create local tracking branches.
           # This is required because 'git push --mirror' only pushes local refs.
