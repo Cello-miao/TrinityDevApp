@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { NativeModules, Platform } from 'react-native';
-import { Product, User } from '../types';
+import { Order, Product, User } from '../types';
 
 // Configure API base URL - adjust according to your environment
 // For Android emulator: use 10.0.2.2 to access host localhost
@@ -55,6 +55,36 @@ const transformUser = (dbUser: any): User => {
     email: dbUser.email || '',
     phone: dbUser.phone_number || '',
     role: dbUser.role === 'admin' ? 'admin' : 'customer',
+  };
+};
+
+const transformOrder = (dbOrder: any): Order => {
+  const items = Array.isArray(dbOrder.items)
+    ? dbOrder.items.map((item: any) => ({
+        quantity: Number(item.quantity) || 0,
+        product: {
+          id: item.product_id?.toString() || '',
+          name: item.product_name || 'Unknown Product',
+          price: parseFloat(item.unit_price) || 0,
+          category: '',
+          image: item.product_picture || '',
+          description: '',
+          stock: 0,
+        },
+      }))
+    : [];
+
+  return {
+    id: dbOrder.order_number || dbOrder.id?.toString() || '',
+    userId: dbOrder.user_id?.toString() || '',
+    items,
+    total: parseFloat(dbOrder.total_amount) || 0,
+    status: dbOrder.status || 'completed',
+    createdAt: dbOrder.created_at || new Date().toISOString(),
+    deliveryAddress: dbOrder.delivery_address || '',
+    paymentMethod: dbOrder.payment_method || 'N/A',
+    customerName: dbOrder.customer_name || '',
+    customerEmail: dbOrder.customer_email || '',
   };
 };
 
@@ -261,8 +291,21 @@ export const orderAPI = {
     });
   },
 
-  getMyOrders: async (): Promise<any[]> => {
-    return apiRequest('/orders/me', { method: 'GET' });
+  getMyOrders: async (): Promise<Order[]> => {
+    const data = await apiRequest('/orders/me', { method: 'GET' });
+    return data.map(transformOrder);
+  },
+};
+
+// Scanner API
+export const scannerAPI = {
+  lookupByBarcode: async (barcode: string): Promise<Product> => {
+    const data = await apiRequest('/scanner/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ barcode }),
+    });
+
+    return transformProduct(data.product);
   },
 };
 

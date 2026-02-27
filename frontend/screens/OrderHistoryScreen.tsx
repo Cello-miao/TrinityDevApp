@@ -9,9 +9,9 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Order } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
+import { orderAPI } from '../lib/api';
 
 export default function OrderHistoryScreen({ navigation }: any) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -19,17 +19,14 @@ export default function OrderHistoryScreen({ navigation }: any) {
 
   const loadOrders = async () => {
     try {
-      const ordersStr = await AsyncStorage.getItem('orders');
-      if (ordersStr) {
-        const allOrders: Order[] = JSON.parse(ordersStr);
-        // Sort by date in descending order
-        const sortedOrders = allOrders.sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setOrders(sortedOrders);
-      }
+      const allOrders = await orderAPI.getMyOrders();
+      const sortedOrders = allOrders.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setOrders(sortedOrders);
     } catch (error) {
       console.error('Failed to load orders:', error);
+      setOrders([]);
     }
   };
 

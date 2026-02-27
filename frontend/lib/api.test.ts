@@ -265,4 +265,37 @@ describe('frontend api module', () => {
     expect(options.method).toBe('GET');
     expect(Array.isArray(orders)).toBe(true);
   });
+
+  test('scannerAPI.lookupByBarcode posts barcode and maps product shape', async () => {
+    (global as any).fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        product: {
+          id: 4,
+          name: 'Orange Juice',
+          price: '3.2',
+          picture: 'oj.png',
+          quantity: 5,
+          barcode: '12345',
+          category: 'Beverages',
+        },
+      }),
+    });
+
+    const { scannerAPI } = await import('./api');
+    const product = await scannerAPI.lookupByBarcode('12345');
+
+    const [url, options] = (global as any).fetch.mock.calls[0];
+    expect(url).toContain('/scanner/lookup');
+    expect(options.method).toBe('POST');
+    expect(options.body).toContain('12345');
+    expect(product).toEqual(
+      expect.objectContaining({
+        id: '4',
+        image: 'oj.png',
+        stock: 5,
+      }),
+    );
+  });
 });

@@ -9,8 +9,7 @@ import {
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { productAPI } from '../lib/api';
-import { fetchProductByBarcode } from '../lib/openfoodfacts';
+import { scannerAPI } from '../lib/api';
 
 export default function BarcodeScannerScreen({ navigation }: any) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -45,13 +44,22 @@ export default function BarcodeScannerScreen({ navigation }: any) {
     ).start();
   }, []);
 
-  const handleBarCodeScanned = async ({ type, data }: any) => {
+  const handleBarCodeScanned = async ({ data }: any) => {
     setScanned(true);
+
+    const barcode = typeof data === 'string' ? data.trim() : '';
+
+    if (!barcode || barcode.length < 4) {
+      Alert.alert(
+        'Unreadable Barcode',
+        'The barcode could not be read. Please align it and try again.',
+        [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
+      );
+      return;
+    }
     
     try {
-      // Find product by barcode from API
-      const products = await productAPI.getAllProducts();
-      const product = products.find(p => p.barcode === data);
+      const product = await scannerAPI.lookupByBarcode(barcode);
     
       if (product) {
         Alert.alert(
@@ -73,7 +81,7 @@ export default function BarcodeScannerScreen({ navigation }: any) {
       } else {
         Alert.alert(
           'Product Not Found',
-          `Barcode: ${data}`,
+          `Barcode: ${barcode}`,
           [
             {
               text: 'Continue Scanning',
@@ -84,6 +92,27 @@ export default function BarcodeScannerScreen({ navigation }: any) {
       }
     } catch (error) {
       console.error('Error scanning barcode:', error);
+
+      const errorMessage = error instanceof Error ? error.message : '';
+
+      if (errorMessage.includes('No product found')) {
+        Alert.alert(
+          'Product Not Found',
+          `No product found for barcode: ${barcode}`,
+          [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
+        );
+        return;
+      }
+
+      if (errorMessage.includes('Invalid barcode')) {
+        Alert.alert(
+          'Unreadable Barcode',
+          'The barcode format is invalid. Please try again.',
+          [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
+        );
+        return;
+      }
+
       Alert.alert(
         'Error',
         'Failed to find product',

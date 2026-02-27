@@ -1,7 +1,13 @@
 import React from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import OrderHistoryScreen from './OrderHistoryScreen';
+import { orderAPI } from '../lib/api';
+
+jest.mock('../lib/api', () => ({
+  orderAPI: {
+    getMyOrders: jest.fn(),
+  },
+}));
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -45,7 +51,7 @@ describe('OrderHistoryScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(AsyncStorage, 'getItem').mockResolvedValue(null);
+    (orderAPI.getMyOrders as jest.Mock).mockResolvedValue([]);
   });
 
   test('renders empty state when there are no orders', async () => {
@@ -106,7 +112,7 @@ describe('OrderHistoryScreen', () => {
       },
     ];
 
-    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(JSON.stringify(orders));
+    (orderAPI.getMyOrders as jest.Mock).mockResolvedValue(orders);
 
     const { getByText, queryByText } = render(
       React.createElement(OrderHistoryScreen, { navigation }),
