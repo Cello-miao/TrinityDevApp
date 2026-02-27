@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "main": "index.js",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -31,11 +32,18 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "newArchEnabled": true,
     "plugins": [
       [
         "expo-camera",
         {
           "cameraPermission": "Allow camera access to scan product barcodes"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
       "expo-asset",

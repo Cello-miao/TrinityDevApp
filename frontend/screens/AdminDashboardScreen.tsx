@@ -9,16 +9,42 @@ import {
   Image,
   SafeAreaView,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Product } from '../types';
-import { logout } from '../lib/auth';
 import { productAPI } from '../lib/api';
+import { fetchProductByBarcode, searchProducts } from '../lib/openfoodfacts';
 
 export default function AdminDashboardScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Import Modal State
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importQuery, setImportQuery] = useState('');
+  const [importType, setImportType] = useState<'name' | 'category'>('name');
+  const [importResults, setImportResults] = useState<any[]>([]);
+  const [isSearchingImport, setIsSearchingImport] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Add Product Modal State
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isFetchingBarcode, setIsFetchingBarcode] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    description: '',
+    category: 'produce',
+    barcode: '',
+    image: '',
+    stock: '100',
+  });
 
   useEffect(() => {
     loadProducts();
@@ -42,22 +68,18 @@ export default function AdminDashboardScreen({ navigation }: any) {
     product.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        onPress: async () => {
-          await logout();
-          navigation.replace('Login');
-        },
-      },
-    ]);
-  };
-
   const handleEdit = (product: Product) => {
-    Alert.alert('Edit Product', `Edit ${product.name}`);
-    // TODO: Navigate to edit screen or show edit modal
+    setEditingProductId(product.id);
+    setNewProduct({
+      name: product.name,
+      price: product.price.toString(),
+      description: product.description || '',
+      category: product.category,
+      barcode: product.barcode || '',
+      image: product.image || '',
+      stock: product.stock.toString(),
+    });
+    setIsAddModalVisible(true);
   };
 
   const handleDelete = async (product: Product) => {
@@ -85,38 +107,194 @@ export default function AdminDashboardScreen({ navigation }: any) {
   };
 
   const getCategoryName = (category: string) => {
+    if (!category) return 'Uncategorized';
+    
     const categories: { [key: string]: string } = {
       'produce': 'Fresh Produce',
       'bakery': 'Bakery',
       'dairy': 'Dairy & Eggs',
       'meat': 'Meat & Seafood',
     };
-    return categories[category] || category;
+    
+    // If it's a known short code, return the mapped name
+    if (categories[category.toLowerCase()]) {
+      return categories[category.toLowerCase()];
+    }
+    
+    // Otherwise, just return the category string as is (useful for OpenFoodFacts categories)
+    return category;
   };
 
-  const getVendorName = (index: number) => {
-    const vendors = ['Farm Direct', 'Tropical Farms', 'Garden Fresh', 'Natural Bakery'];
-    return vendors[index % vendors.length];
+  const handleFetchBarcode = async () => {
+    if (!newProduct.barcode) {
+      Alert.alert('Error', 'Please enter a barcode first');
+      return;
+    }
+
+    setIsFetchingBarcode(true);
+    try {
+      const data = await fetchProductByBarcode(newProduct.barcode);
+      if (data && data.product) {
+        setNewProduct(prev => {
+          // Extract the first category from the comma-separated list if available
+          let fetchedCategory = prev.category;
+          if (data.product.categories) {
+            const categoriesList = data.product.categories.split(',');
+            if (categoriesList.length > 0) {
+              fetchedCategory = categoriesList[0].trim();
+            }
+          }
+
+          return {
+            ...prev,
+            name: data.product.product_name || prev.name,
+            image: data.product.image_url || prev.image,
+            description: data.product.ingredients_text || prev.description,
+            category: fetchedCategory,
+          };
+        });
+        Alert.alert('Success', 'Product data fetched from OpenFoodFacts');
+      } else {
+        Alert.alert('Not Found', 'Product not found in OpenFoodFacts database');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch product data');
+    } finally {
+      setIsFetchingBarcode(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'You need to allow access to your photos to upload an image.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setNewProduct({ ...newProduct, image: base64Image });
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleSaveProduct = async () => {
+    if (!newProduct.name || !newProduct.price) {
+      Alert.alert('Error', 'Name and price are required');
+      return;
+    }
+
+    setIsSavingProduct(true);
+    try {
+      const productData = {
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        description: newProduct.description,
+        category: newProduct.category,
+        barcode: newProduct.barcode,
+        image: newProduct.image || 'https://via.placeholder.com/150',
+        stock: parseInt(newProduct.stock) || 0,
+      };
+
+      if (editingProductId) {
+        await productAPI.updateProduct(editingProductId, productData);
+        Alert.alert('Success', 'Product updated successfully');
+      } else {
+        await productAPI.createProduct(productData);
+        Alert.alert('Success', 'Product added successfully');
+      }
+      
+      setIsAddModalVisible(false);
+      setEditingProductId(null);
+      setNewProduct({
+        name: '',
+        price: '',
+        description: '',
+        category: 'produce',
+        barcode: '',
+        image: '',
+        stock: '100',
+      });
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to save product:', error);
+      Alert.alert('Error', 'Failed to save product');
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleSearchImport = async () => {
+    if (!importQuery) {
+      Alert.alert('Error', 'Please enter a search query');
+      return;
+    }
+
+    setIsSearchingImport(true);
+    try {
+      const results = await searchProducts(importQuery, importType);
+      setImportResults(results);
+      if (results.length === 0) {
+        Alert.alert('Not Found', 'No products found matching your query');
+      }
+    } catch (error) {
+      console.error('Failed to search products:', error);
+      Alert.alert('Error', 'Failed to search products');
+    } finally {
+      setIsSearchingImport(false);
+    }
+  };
+
+  const handleImportProduct = async (product: any) => {
+    setIsImporting(true);
+    try {
+      let fetchedCategory = 'produce';
+      if (product.categories) {
+        const categoriesList = product.categories.split(',');
+        if (categoriesList.length > 0) {
+          fetchedCategory = categoriesList[0].trim();
+        }
+      }
+
+      const productData = {
+        name: product.product_name || 'Unknown Product',
+        price: 0, // Default price, admin can edit later
+        description: product.ingredients_text || '',
+        category: fetchedCategory,
+        barcode: product.code || '',
+        image: product.image_url || 'https://via.placeholder.com/150',
+        stock: 100, // Default stock
+      };
+
+      await productAPI.createProduct(productData);
+      Alert.alert('Success', `${productData.name} imported successfully`);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to import product:', error);
+      Alert.alert('Error', 'Failed to import product');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Manage your store</Text>
-        </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#94a3b8" />
+          <Ionicons name="search" size={20} color="#64748b" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search..."
@@ -128,34 +306,55 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.importButton}>
+          <TouchableOpacity 
+            style={styles.importButton}
+            onPress={() => {
+              setImportQuery('');
+              setImportResults([]);
+              setIsImportModalVisible(true);
+            }}
+          >
             <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
             <Text style={styles.importButtonText}>Import</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => {
+              setEditingProductId(null);
+              setNewProduct({
+                name: '',
+                price: '',
+                description: '',
+                category: 'produce',
+                barcode: '',
+                image: '',
+                stock: '100',
+              });
+              setIsAddModalVisible(true);
+            }}
+          >
             <Ionicons name="add" size={20} color="#fff" />
             <Text style={styles.addButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
 
         {/* Products List */}
-        {filteredProducts.map((product, index) => (
+        {filteredProducts.map((product) => (
           <View key={product.id} style={styles.productCard}>
             <Image
-              source={{ uri: product.image }}
+              source={{ uri: product.image || 'https://via.placeholder.com/150' }}
               style={styles.productImage}
             />
             <View style={styles.productContent}>
               <View style={styles.productHeader}>
                 <View style={styles.productLeft}>
                   <Text style={styles.productName}>{product.name}</Text>
-                  <Text style={styles.productVendor}>{getVendorName(index)}</Text>
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>{getCategoryName(product.category)}</Text>
                   </View>
                   <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
                   <Text style={styles.productBarcode}>
-                    {Math.floor(Math.random() * 1000000000000000).toString().padStart(13, '3')}
+                    {product.barcode || 'No barcode'}
                   </Text>
                 </View>
                 <View style={styles.productRight}>
@@ -191,9 +390,6 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <TouchableOpacity style={styles.navItem}>
           <View style={styles.navIconContainer}>
             <Ionicons name="cube" size={24} color="#475569" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>{products.length}</Text>
-            </View>
           </View>
           <Text style={styles.navText}>Products</Text>
         </TouchableOpacity>
@@ -203,9 +399,6 @@ export default function AdminDashboardScreen({ navigation }: any) {
         >
           <View style={styles.navIconContainer}>
             <Ionicons name="receipt-outline" size={24} color="#94a3b8" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>4</Text>
-            </View>
           </View>
           <Text style={[styles.navText, styles.navTextInactive]}>Orders</Text>
         </TouchableOpacity>
@@ -215,13 +408,247 @@ export default function AdminDashboardScreen({ navigation }: any) {
         >
           <View style={styles.navIconContainer}>
             <Ionicons name="people-outline" size={24} color="#94a3b8" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>5</Text>
-            </View>
           </View>
           <Text style={[styles.navText, styles.navTextInactive]}>Customers</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('AdminProfile')}
+        >
+          <View style={styles.navIconContainer}>
+            <Ionicons name="person-outline" size={24} color="#94a3b8" />
+          </View>
+          <Text style={[styles.navText, styles.navTextInactive]}>Profile</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Add Product Modal */}
+      <Modal
+        visible={isAddModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingProductId ? 'Edit Product' : 'Add New Product'}</Text>
+              <TouchableOpacity onPress={() => setIsAddModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Barcode</Text>
+                <View style={styles.barcodeInputContainer}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="Enter barcode"
+                    value={newProduct.barcode}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, barcode: text })}
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity 
+                    style={styles.fetchButton}
+                    onPress={handleFetchBarcode}
+                    disabled={isFetchingBarcode}
+                  >
+                    {isFetchingBarcode ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.fetchButtonText}>Fetch Data</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.helpText}>Fetch product details from OpenFoodFacts</Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Product Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter product name"
+                  value={newProduct.name}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Price (€) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  value={newProduct.price}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Category</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. produce, bakery, dairy, meat"
+                  value={newProduct.category}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, category: text })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Stock Quantity</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="100"
+                  value={newProduct.stock}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Image</Text>
+                <View style={styles.imageInputContainer}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="https://... or pick local image"
+                    value={newProduct.image}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, image: text })}
+                  />
+                  <TouchableOpacity 
+                    style={styles.imagePickerButton}
+                    onPress={pickImage}
+                  >
+                    <Ionicons name="image-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                {newProduct.image ? (
+                  <Image 
+                    source={{ uri: newProduct.image }} 
+                    style={styles.imagePreview} 
+                  />
+                ) : null}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Product description or ingredients..."
+                  value={newProduct.description}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setIsAddModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveProduct}
+                disabled={isSavingProduct}
+              >
+                {isSavingProduct ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.saveButtonText}>{editingProductId ? 'Update Product' : 'Save Product'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        visible={isImportModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsImportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Import Products</Text>
+              <TouchableOpacity onPress={() => setIsImportModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.importTypeContainer}>
+              <TouchableOpacity
+                style={[styles.importTypeButton, importType === 'name' && styles.importTypeButtonActive]}
+                onPress={() => setImportType('name')}
+              >
+                <Text style={[styles.importTypeText, importType === 'name' && styles.importTypeTextActive]}>By Name</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.importTypeButton, importType === 'category' && styles.importTypeButtonActive]}
+                onPress={() => setImportType('category')}
+              >
+                <Text style={[styles.importTypeText, importType === 'category' && styles.importTypeTextActive]}>By Category</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.importSearchContainer}>
+              <TextInput
+                style={styles.importSearchInput}
+                placeholder={importType === 'name' ? "e.g. Nutella" : "e.g. en:chocolates"}
+                value={importQuery}
+                onChangeText={setImportQuery}
+                onSubmitEditing={handleSearchImport}
+              />
+              <TouchableOpacity 
+                style={styles.importSearchButton}
+                onPress={handleSearchImport}
+                disabled={isSearchingImport}
+              >
+                {isSearchingImport ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="search" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.importResultsList}>
+              {importResults.map((item, index) => (
+                <View key={item.code || index} style={styles.importResultItem}>
+                  <Image
+                    source={{ uri: item.image_url || 'https://via.placeholder.com/50' }}
+                    style={styles.importResultImage}
+                  />
+                  <View style={styles.importResultInfo}>
+                    <Text style={styles.importResultName} numberOfLines={2}>
+                      {item.product_name || 'Unknown Product'}
+                    </Text>
+                    <Text style={styles.importResultBrand} numberOfLines={1}>
+                      {item.brands || 'Unknown Brand'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.importResultButton}
+                    onPress={() => handleImportProduct(item)}
+                    disabled={isImporting}
+                  >
+                    <Ionicons name="download-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {importResults.length === 0 && !isSearchingImport && importQuery !== '' && (
+                <Text style={styles.noResultsText}>No products found. Try another search.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -231,59 +658,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    backgroundColor: '#475569',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#cbd5e1',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#5a6c7d',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   scrollView: {
     flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3e4f5e',
+    backgroundColor: '#e2e8f0',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 24,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#fff',
+    color: '#1e293b',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -446,22 +838,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 4,
   },
-  navBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -10,
-    backgroundColor: '#475569',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  navBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
   navText: {
     fontSize: 12,
     color: '#475569',
@@ -469,5 +845,228 @@ const styles = StyleSheet.create({
   },
   navTextInactive: {
     color: '#94a3b8',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '85%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1e293b',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  barcodeInputContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fetchButton: {
+    backgroundColor: '#475569',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  fetchButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 6,
+  },
+  imageInputContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  imagePickerButton: {
+    backgroundColor: '#475569',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginTop: 12,
+    backgroundColor: '#f8fafc',
+    resizeMode: 'contain',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#475569',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Import Modal Styles
+  importTypeContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  importTypeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  importTypeButtonActive: {
+    backgroundColor: '#475569',
+  },
+  importTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  importTypeTextActive: {
+    color: '#fff',
+  },
+  importSearchContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  importSearchInput: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1e293b',
+  },
+  importSearchButton: {
+    backgroundColor: '#475569',
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  importResultsList: {
+    flex: 1,
+    padding: 16,
+  },
+  importResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  importResultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+    marginRight: 12,
+  },
+  importResultInfo: {
+    flex: 1,
+  },
+  importResultName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  importResultBrand: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  importResultButton: {
+    backgroundColor: '#475569',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  noResultsText: {
+    textAlign: 'center',
+    color: '#64748b',
+    marginTop: 20,
+    fontSize: 14,
   },
 });

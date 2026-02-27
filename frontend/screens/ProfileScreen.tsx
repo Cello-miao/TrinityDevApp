@@ -19,6 +19,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   const loadUserData = async () => {
     try {
@@ -26,6 +27,20 @@ export default function ProfileScreen({ navigation }: any) {
       const userData = await userAPI.getProfile();
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+      
+      // Load order count
+      const ordersStr = await AsyncStorage.getItem('orders');
+      if (ordersStr) {
+        const orders = JSON.parse(ordersStr);
+        setOrderCount(orders.length);
+      }
+
+      // Load favorites count
+      const favoritesStr = await AsyncStorage.getItem('favorites');
+      if (favoritesStr) {
+        const favorites = JSON.parse(favoritesStr);
+        setFavoritesCount(favorites.length);
+      }
     } catch (error) {
       console.error('Failed to load user data:', error);
       // Fallback to local storage
@@ -83,11 +98,11 @@ export default function ProfileScreen({ navigation }: any) {
           {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statValue}>{orderCount}</Text>
               <Text style={styles.statLabel}>Orders</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statValue}>{favoritesCount}</Text>
               <Text style={styles.statLabel}>Favorites</Text>
             </View>
             <View style={styles.statItem}>
@@ -119,22 +134,15 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: '#fce7f3' }]}>
-                <Ionicons name="bag-outline" size={24} color="#ec4899" />
-              </View>
-              <Text style={styles.menuText}>My Favorites</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Favorites')}
+          >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: '#fee2e2' }]}>
                 <Ionicons name="heart-outline" size={24} color="#ef4444" />
               </View>
-              <Text style={styles.menuText}>Following</Text>
+              <Text style={styles.menuText}>My Favorites</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>
