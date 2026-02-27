@@ -10,6 +10,7 @@ import {
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { productAPI } from '../lib/api';
+import { fetchProductByBarcode } from '../lib/openfoodfacts';
 
 export default function BarcodeScannerScreen({ navigation }: any) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);

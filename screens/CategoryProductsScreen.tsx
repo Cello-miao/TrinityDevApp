@@ -58,7 +58,6 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
           <Ionicons name="arrow-back" size={24} color="#1e293b" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
           <Text style={styles.categoryName}>{category.name}</Text>
         </View>
         <View style={{ width: 24 }} />
@@ -144,9 +143,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  categoryEmoji: {
-    fontSize: 24,
   },
   categoryName: {
     fontSize: 18,

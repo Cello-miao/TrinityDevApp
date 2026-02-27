@@ -141,6 +141,8 @@ export default function CheckoutScreen({ route, navigation }: any) {
         createdAt: new Date().toISOString(),
         deliveryAddress: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
         paymentMethod: method,
+        customerName: `${firstName} ${lastName}`,
+        customerEmail: email,
       };
 
       // Save order

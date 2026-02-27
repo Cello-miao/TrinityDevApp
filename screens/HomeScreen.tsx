@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
@@ -22,20 +23,59 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('Guest');
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    loadProducts();
-    loadUserName();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts();
+      loadUserName();
+    }, [])
+  );
 
   useEffect(() => {
     if (products.length > 0) {
       loadRecommendations();
+      generateDynamicCategories();
     }
   }, [products]);
+
+  const generateDynamicCategories = () => {
+    const CATEGORY_META: Record<string, { emoji: string, image: string }> = {
+      'Fresh Produce': { emoji: '🥕', image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300' },
+      'Bakery': { emoji: '🥖', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300' },
+      'Dairy & Eggs': { emoji: '🧀', image: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=300' },
+      'Meat & Seafood': { emoji: '🥩', image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=300' },
+      'Beverages': { emoji: '☕', image: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=300' },
+      'Snacks': { emoji: '🍿', image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=300' },
+      'Health & Beauty': { emoji: '💄', image: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=300' },
+      'Household': { emoji: '🧹', image: 'https://images.unsplash.com/photo-1584820927498-cafe5c152964?w=300' },
+      'Frozen': { emoji: '🧊', image: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2a009?w=300' },
+      'Pantry': { emoji: '🥫', image: 'https://images.unsplash.com/photo-1606859191214-25806e8e2423?w=300' },
+      'Chocolates': { emoji: '🍫', image: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=300' },
+      'Spreads': { emoji: '🍯', image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=300' },
+      'Breakfast': { emoji: '🥣', image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=300' },
+      'Groceries': { emoji: '🛒', image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300' },
+    };
+
+    const categoryMap = new Map();
+    products.forEach(p => {
+      if (p.category && !categoryMap.has(p.category)) {
+        const meta = CATEGORY_META[p.category] || {
+          emoji: '📦',
+          image: p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300'
+        };
+        categoryMap.set(p.category, {
+          name: p.category,
+          ...meta
+        });
+      }
+    });
+    
+    setDynamicCategories(Array.from(categoryMap.values()));
+  };
 
   const loadUserName = async () => {
     try {
@@ -123,15 +163,6 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const categories = [
-    { name: 'Fresh Produce', image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300', emoji: '🥕' },
-    { name: 'Bakery', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300', emoji: '🥖' },
-    { name: 'Dairy & Eggs', image: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=300', emoji: '🧀' },
-    { name: 'Meat & Seafood', image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=300', emoji: '🥩' },
-    { name: 'Beverages', image: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=300', emoji: '☕' },
-    { name: 'Snacks', image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=300', emoji: '🍿' },
-  ];
-
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -148,7 +179,7 @@ export default function HomeScreen({ navigation }: any) {
         </View>
 
         {/* Quick Action Buttons */}
-        <View style={styles.quickActionsContainer}>
+        {/* <View style={styles.quickActionsContainer}>
           <TouchableOpacity 
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Scanner')}
@@ -188,7 +219,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
             <Text style={styles.quickActionText}>My Account</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Special Offers */}
         <View style={styles.section}>
@@ -235,7 +266,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           <View style={styles.categoriesGrid}>
-            {categories.map((category, index) => (
+            {dynamicCategories.map((category, index) => (
               <TouchableOpacity 
                 key={index} 
                 style={styles.categoryCard}

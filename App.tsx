@@ -20,6 +20,8 @@ import BarcodeScannerScreen from './screens/BarcodeScannerScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import AdminOrdersScreen from './screens/AdminOrdersScreen';
 import AdminCustomersScreen from './screens/AdminCustomersScreen';
+import AdminProfileScreen from './screens/AdminProfileScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -127,8 +129,18 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            name="AdminProfile" 
+            component={AdminProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
             name="CategoryProducts" 
             component={CategoryProductsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Favorites" 
+            component={FavoritesScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen 
