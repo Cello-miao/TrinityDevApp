@@ -112,15 +112,20 @@ export const authAPI = {
     // Backend returns { message, token }, need to decode user info from token
     if (data.token) {
       await AsyncStorage.setItem('token', data.token);
-      
-      // Parse user info from token or fetch from backend
-      // Temporarily create a user object
-      const user: User = {
-        id: 'temp', // Will fetch from profile API later
-        name: email.split('@')[0],
-        email: email,
-        role: 'customer',
-      };
+
+      let user: User;
+      try {
+        const profileData = await apiRequest('/users/profile', { method: 'GET' });
+        user = transformUser(profileData);
+      } catch {
+        user = {
+          id: 'temp',
+          name: email.split('@')[0],
+          email,
+          role: 'customer',
+        };
+      }
+
       await AsyncStorage.setItem('user', JSON.stringify(user));
       
       return { token: data.token, user };
@@ -234,6 +239,30 @@ export const cartAPI = {
 
   clearCart: async (): Promise<void> => {
     await apiRequest('/cart/clear', { method: 'DELETE' });
+  },
+};
+
+// Order API
+export const orderAPI = {
+  createOrder: async (payload: {
+    items: Array<{ product_id: number; quantity: number }>;
+    payment_method: string;
+    delivery_address?: string;
+    customer_name?: string;
+    customer_email?: string;
+    shipping_fee?: number;
+    tax_rate?: number;
+    tax_amount?: number;
+    notes?: string;
+  }): Promise<any> => {
+    return apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getMyOrders: async (): Promise<any[]> => {
+    return apiRequest('/orders/me', { method: 'GET' });
   },
 };
 

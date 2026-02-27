@@ -5,7 +5,9 @@ module.exports = {
     {
       displayName: "frontend",
       testEnvironment: "node",
-      preset: "ts-jest",
+      transform: {
+        '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
+      },
       testMatch: ["<rootDir>/frontend/**/*.test.ts", "<rootDir>/frontend/**/*.test.tsx"],
       moduleFileExtensions: ["ts", "tsx", "js", "json"],
       collectCoverageFrom: ["frontend/lib/**/*.ts", "frontend/lib/**/*.tsx"],

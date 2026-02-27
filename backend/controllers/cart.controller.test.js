@@ -28,6 +28,7 @@ describe('cart.controller', () => {
     await getCart(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('WHERE cart.user_id = $1'), [1]);
   });
 
   test('addToCart updates existing item', async () => {
@@ -64,6 +65,10 @@ describe('cart.controller', () => {
     await removeFromCart(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(pool.query).toHaveBeenCalledWith(
+      'DELETE FROM cart WHERE id = $1 AND user_id = $2',
+      ['5', 1],
+    );
   });
 
   test('clearCart returns success', async () => {
@@ -74,5 +79,31 @@ describe('cart.controller', () => {
     await clearCart(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('getCart returns 500 on query error', async () => {
+    pool.query.mockRejectedValueOnce(new Error('db fail'));
+    const req = { user: { id: 1 } };
+    const res = createRes();
+
+    await getCart(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Server error' }),
+    );
+  });
+
+  test('removeFromCart returns 500 on query error', async () => {
+    pool.query.mockRejectedValueOnce(new Error('db fail'));
+    const req = { user: { id: 1 }, params: { id: '5' } };
+    const res = createRes();
+
+    await removeFromCart(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Server error' }),
+    );
   });
 });

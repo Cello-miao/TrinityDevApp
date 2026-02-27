@@ -6,6 +6,26 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: (...args: any[]) => setItem(...args),
 }));
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: {
+      hostUri: '192.168.1.10:8081',
+    },
+  },
+}));
+
+jest.mock('react-native', () => ({
+  NativeModules: {
+    SourceCode: {
+      scriptURL: 'exp://192.168.1.10:8081',
+    },
+  },
+  Platform: {
+    OS: 'android',
+  },
+}));
+
 describe('frontend api module', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -47,11 +67,22 @@ describe('frontend api module', () => {
   });
 
   test('authAPI.login stores token and user', async () => {
-    (global as any).fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ token: 'jwt-token' }),
-    });
+    (global as any).fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ token: 'jwt-token' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 7,
+          username: 'john',
+          email: 'john@doe.com',
+          role: 'admin',
+        }),
+      });
 
     const { authAPI } = await import('./api');
     const result = await authAPI.login('john@doe.com', '123456');
@@ -62,6 +93,7 @@ describe('frontend api module', () => {
       expect.stringContaining('john'),
     );
     expect(result.token).toBe('jwt-token');
+    expect(result.user.role).toBe('admin');
   });
 
   test('authAPI.login throws when token missing', async () => {
@@ -87,6 +119,16 @@ describe('frontend api module', () => {
         ok: true,
         status: 200,
         json: async () => ({ token: 'after-register-token' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 1,
+          username: 'jane',
+          email: 'jane@doe.com',
+          role: 'user',
+        }),
       });
 
     const { authAPI } = await import('./api');
@@ -130,6 +172,36 @@ describe('frontend api module', () => {
     expect(secondArg.body).toContain('product_id');
   });
 
+  test('cartAPI.removeFromCart calls delete endpoint with provided id', async () => {
+    (global as any).fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'ok' }),
+    });
+
+    const { cartAPI } = await import('./api');
+    await cartAPI.removeFromCart('123');
+
+    const [url, options] = (global as any).fetch.mock.calls[0];
+    expect(url).toContain('/cart/remove/123');
+    expect(options.method).toBe('DELETE');
+  });
+
+  test('cartAPI.clearCart sends delete to /cart/clear', async () => {
+    (global as any).fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: 'cleared' }),
+    });
+
+    const { cartAPI } = await import('./api');
+    await cartAPI.clearCart();
+
+    const [url, options] = (global as any).fetch.mock.calls[0];
+    expect(url).toContain('/cart/clear');
+    expect(options.method).toBe('DELETE');
+  });
+
   test('apiRequest includes Authorization header when token exists', async () => {
     getItem.mockResolvedValue('token-abc');
     (global as any).fetch.mockResolvedValue({
@@ -155,5 +227,42 @@ describe('frontend api module', () => {
     const { productAPI } = await import('./api');
 
     await expect(productAPI.getProductById('404')).rejects.toThrow('Not found from backend');
+  });
+
+  test('orderAPI.createOrder posts payload to /orders', async () => {
+    (global as any).fetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ order: { id: 1 } }),
+    });
+
+    const { orderAPI } = await import('./api');
+    await orderAPI.createOrder({
+      items: [{ product_id: 9, quantity: 2 }],
+      payment_method: 'paypal',
+      shipping_fee: 5,
+    });
+
+    const [url, options] = (global as any).fetch.mock.calls[0];
+    expect(url).toContain('/orders');
+    expect(options.method).toBe('POST');
+    expect(options.body).toContain('payment_method');
+    expect(options.body).toContain('product_id');
+  });
+
+  test('orderAPI.getMyOrders sends GET to /orders/me', async () => {
+    (global as any).fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    });
+
+    const { orderAPI } = await import('./api');
+    const orders = await orderAPI.getMyOrders();
+
+    const [url, options] = (global as any).fetch.mock.calls[0];
+    expect(url).toContain('/orders/me');
+    expect(options.method).toBe('GET');
+    expect(Array.isArray(orders)).toBe(true);
   });
 });

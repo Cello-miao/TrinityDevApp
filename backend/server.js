@@ -10,6 +10,7 @@ const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
 const userRoutes = require("./routes/user.routes");
 const scannerRoutes = require("./routes/scanner.routes");
+const orderRoutes = require("./routes/order.routes");
 
 // Configure CORS to allow all origins
 app.use(cors({
@@ -32,6 +33,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/scanner", scannerRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CartItem, Order } from '../types';
+import { orderAPI } from '../lib/api';
+import { CartItem } from '../types';
 
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as { cartItems: CartItem[]; total: number };
@@ -129,36 +130,30 @@ export default function CheckoutScreen({ route, navigation }: any) {
 
   const completeOrder = async (method: string) => {
     try {
-      const userStr = await AsyncStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
+      const orderResponse = await orderAPI.createOrder({
+        items: cartItems.map((item) => ({
+          product_id: Number(item.product.id),
+          quantity: item.quantity,
+        })),
+        payment_method: method.toLowerCase(),
+        delivery_address: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
+        customer_name: `${firstName} ${lastName}`,
+        customer_email: email,
+        shipping_fee: deliveryFee,
+        tax_rate: 0,
+        tax_amount: 0,
+      });
 
-      const order: Order = {
-        id: `ORD${Date.now()}`,
-        userId: user?.id || 'guest',
-        items: cartItems,
-        total: orderTotal,
-        status: 'completed',
-        createdAt: new Date().toISOString(),
-        deliveryAddress: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
-        paymentMethod: method,
-        customerName: `${firstName} ${lastName}`,
-        customerEmail: email,
-      };
-
-      // Save order
-      const ordersStr = await AsyncStorage.getItem('orders');
-      const orders: Order[] = ordersStr ? JSON.parse(ordersStr) : [];
-      orders.push(order);
-      await AsyncStorage.setItem('orders', JSON.stringify(orders));
-
-      // Clear cart
+      // Clear local cart cache (server cart is cleared by backend after order creation)
       await AsyncStorage.setItem('cart', JSON.stringify([]));
 
       setIsProcessing(false);
 
+      const orderLabel = orderResponse?.order?.order_number || orderResponse?.order?.id || 'N/A';
+
       Alert.alert(
         'Order Successful! 🎉',
-        `Your order #${order.id} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
+        `Your order #${orderLabel} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
         [
           {
             text: 'View Orders',
@@ -167,6 +162,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
         ]
       );
     } catch (error) {
+      console.error('Failed to create order:', error);
       setIsProcessing(false);
       Alert.alert('Error', 'Failed to place order, please try again');
     }

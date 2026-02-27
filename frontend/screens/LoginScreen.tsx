@@ -35,21 +35,13 @@ export default function LoginScreen({ navigation }: any) {
       return;
     }
 
-    // Check if admin login
-    if (email === 'admin@trinity.com' && password === 'admin123') {
-      // Admin login - navigate to admin dashboard
-      const user = await login(email, password);
-      if (user) {
-        navigation.replace('AdminDashboard');
-      } else {
-        Alert.alert('Error', 'Admin login failed');
-      }
-      return;
-    }
-
     const user = await login(email, password);
     if (user) {
-      navigation.replace('Main');
+      if (user.role === 'admin') {
+        navigation.replace('AdminDashboard');
+      } else {
+        navigation.replace('Main');
+      }
     } else {
       Alert.alert('Error', 'Login failed, please check your credentials');
     }
