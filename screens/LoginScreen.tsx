@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,24 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../lib/auth';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Clear old data
+  useEffect(() => {
+    const clearOldData = async () => {
+      try {
+        await AsyncStorage.multiRemove(['user', 'token', 'cart']);
+      } catch (error) {
+        console.error('Failed to clear old data:', error);
+      }
+    };
+    clearOldData();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {

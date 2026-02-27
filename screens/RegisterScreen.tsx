@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { register } from '../lib/auth';
 
@@ -18,25 +19,43 @@ export default function RegisterScreen({ navigation }: any) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    console.log('Register button clicked');
+    console.log('Form data:', { name, email, phone, password: '***', confirmPassword: '***' });
+    
     if (!name || !email || !phone || !password || !confirmPassword) {
+      console.log('Validation failed: missing fields');
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
+      console.log('Validation failed: passwords do not match');
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    const user = await register(name, email, phone, password);
-    if (user) {
-      Alert.alert('Success', 'Registration successful!', [
-        { text: 'OK', onPress: () => navigation.replace('Main') },
-      ]);
-    } else {
-      Alert.alert('Error', 'Registration failed, please try again');
+    console.log('Starting registration...');
+    setLoading(true);
+    
+    try {
+      const user = await register(name, email, phone, password);
+      console.log('Registration result:', user);
+      
+      if (user) {
+        Alert.alert('Success', 'Registration successful!', [
+          { text: 'OK', onPress: () => navigation.replace('Main') },
+        ]);
+      } else {
+        Alert.alert('Error', 'Registration failed, please try again');
+      }
+    } catch (error) {
+      console.error('Registration exception:', error);
+      Alert.alert('Error', 'An error occurred during registration');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,8 +111,16 @@ export default function RegisterScreen({ navigation }: any) {
             placeholderTextColor="#94a3b8"
           />
 
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Register</Text>
+          <TouchableOpacity 
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]} 
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.registerButtonText}>Register</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -128,6 +155,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
+  },
+  registerButtonDisabled: {
+    backgroundColor: '#94a3b8',
   },
   registerButtonText: {
     color: '#fff',

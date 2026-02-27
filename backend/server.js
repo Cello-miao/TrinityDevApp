@@ -9,15 +9,35 @@ const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
 const userRoutes = require("./routes/user.routes");
 
-app.use(cors());
+// Configure CORS to allow all origins
+app.use(cors({
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
+
+// Logging middleware - log all requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/users", userRoutes);
 
+// Test route
+app.get("/api/test", (req, res) => {
+  console.log('Test route hit');
+  res.json({ message: "API is working!" });
+});
+
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 pool.query("SELECT NOW()", (err, res) => {
   if (err) {
@@ -27,6 +47,7 @@ pool.query("SELECT NOW()", (err, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Access from your network: http://10.68.250.34:${PORT}`);
 });

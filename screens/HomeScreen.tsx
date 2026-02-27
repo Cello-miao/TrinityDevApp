@@ -12,16 +12,107 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockProducts } from '../lib/mockData';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
+import { productAPI } from '../lib/api';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [userName] = useState('xinxin');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('Guest');
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    loadProducts();
+    loadUserName();
+  }, []);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      loadRecommendations();
+    }
+  }, [products]);
+
+  const loadUserName = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || user.email?.split('@')[0] || 'Guest');
+      }
+    } catch (error) {
+      console.error('Failed to load user name:', error);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productAPI.getAllProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      Alert.alert('Error', 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRecommendations = async () => {
+    try {
+      // Load order history
+      const ordersStr = await AsyncStorage.getItem('orders');
+      
+      if (ordersStr) {
+        const orders = JSON.parse(ordersStr);
+        
+        // Extract purchased product categories and IDs
+        const purchasedCategories = new Set<string>();
+        const purchasedProductIds = new Set<string>();
+        
+        orders.forEach((order: any) => {
+          order.items?.forEach((item: any) => {
+            if (item.product) {
+              purchasedCategories.add(item.product.category);
+              purchasedProductIds.add(item.product.id);
+            }
+          });
+        });
+
+        // Recommend products from same categories, excluding already purchased
+        const recommendations = products.filter(product => 
+          purchasedCategories.has(product.category) && 
+          !purchasedProductIds.has(product.id)
+        );
+
+        // If not enough recommendations, add popular products (low stock = high demand)
+        if (recommendations.length < 6) {
+          const popularProducts = products
+            .filter(p => !purchasedProductIds.has(p.id))
+            .sort((a, b) => a.stock - b.stock)
+            .slice(0, 6 - recommendations.length);
+          
+          setRecommendedProducts([...recommendations, ...popularProducts].slice(0, 6));
+        } else {
+          setRecommendedProducts(recommendations.slice(0, 6));
+        }
+      } else {
+        // No purchase history - show popular products (low stock = popular)
+        const popularProducts = products
+          .sort((a, b) => a.stock - b.stock)
+          .slice(0, 6);
+        setRecommendedProducts(popularProducts);
+      }
+    } catch (error) {
+      console.error('Failed to load recommendations:', error);
+      // Fallback to first 6 products
+      setRecommendedProducts(products.slice(0, 6));
+    }
+  };
 
   const handleAddToCart = async (product: Product) => {
     try {
@@ -45,8 +136,6 @@ export default function HomeScreen({ navigation }: any) {
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const recommendedProducts = filteredProducts.slice(0, 6);
-
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -56,6 +145,49 @@ export default function HomeScreen({ navigation }: any) {
             <Ionicons name="person-circle-outline" size={20} color="#64748b" />
             <Text style={styles.greeting}>Hello, {userName}</Text>
           </View>
+        </View>
+
+        {/* Quick Action Buttons */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Scanner')}
+          >
+            <View style={styles.quickActionIcon}>
+              <Ionicons name="scan" size={28} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>Scan Product</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#10b981' }]}>
+              <Ionicons name="cart" size={28} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>My Cart</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Orders')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#f59e0b' }]}>
+              <Ionicons name="receipt" size={28} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>Order History</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#8b5cf6' }]}>
+              <Ionicons name="person" size={28} color="#fff" />
+            </View>
+            <Text style={styles.quickActionText}>My Account</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Special Offers */}
@@ -197,6 +329,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1e293b',
     fontWeight: '400',
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    gap: 12,
+    backgroundColor: '#fff',
+  },
+  quickActionButton: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',

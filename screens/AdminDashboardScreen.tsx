@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,31 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockProducts } from '../lib/mockData';
 import { Product } from '../types';
 import { logout } from '../lib/auth';
+import { productAPI } from '../lib/api';
 
 export default function AdminDashboardScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [products] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productAPI.getAllProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      Alert.alert('Error', 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -39,9 +57,10 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
   const handleEdit = (product: Product) => {
     Alert.alert('Edit Product', `Edit ${product.name}`);
+    // TODO: Navigate to edit screen or show edit modal
   };
 
-  const handleDelete = (product: Product) => {
+  const handleDelete = async (product: Product) => {
     Alert.alert(
       'Delete Product',
       `Are you sure you want to delete ${product.name}?`,
@@ -50,8 +69,15 @@ export default function AdminDashboardScreen({ navigation }: any) {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            // Delete logic here
+          onPress: async () => {
+            try {
+              await productAPI.deleteProduct(product.id);
+              Alert.alert('Success', 'Product deleted successfully');
+              loadProducts(); // Reload products
+            } catch (error) {
+              console.error('Failed to delete product:', error);
+              Alert.alert('Error', 'Failed to delete product');
+            }
           },
         },
       ]
