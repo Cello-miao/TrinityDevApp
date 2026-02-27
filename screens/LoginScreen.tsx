@@ -38,14 +38,12 @@ export default function LoginScreen({ navigation }: any) {
     // Check if admin login
     if (email === 'admin@trinity.com' && password === 'admin123') {
       // Admin login - navigate to admin dashboard
-      const adminUser = {
-        id: 'admin-001',
-        name: 'Admin',
-        email: 'admin@trinity.com',
-        role: 'admin',
-      };
-      await login(email, password); // Save to storage
-      navigation.replace('AdminDashboard');
+      const user = await login(email, password);
+      if (user) {
+        navigation.replace('AdminDashboard');
+      } else {
+        Alert.alert('Error', 'Admin login failed');
+      }
       return;
     }
 
