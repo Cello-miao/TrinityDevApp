@@ -1,6 +1,6 @@
 # Trinity Project Mobile Application Development Roadmap
 
-## Quick Start (Docker + Android Emulator)
+## Quick Start (Docker-First)
 
 This project uses a split setup:
 - root `package.json`: Expo mobile app
@@ -8,15 +8,26 @@ This project uses a split setup:
 
 Having both root and `backend` `node_modules` / `package-lock.json` is expected.
 
-### 1) Start backend + database with Docker
+### 1) Install dependencies (once)
 
 ```bash
 npm install
+```
+
+> On Windows PowerShell with execution policy restrictions, use:
+
+```bash
+npm.cmd install
+```
+
+### 2) Start backend + database with Docker
+
+```bash
 npm run docker:up
 npm run docker:logs
 ```
 
-### 2) Run app on Android emulator
+### 3) Start Expo app (Android emulator)
 
 In another terminal at repo root:
 
@@ -27,7 +38,22 @@ npm run start
 
 Then press `a` in Metro to open Android.
 
-### 3) Stop Docker services
+### 4) Start Expo app (real device)
+
+Set API URL to your computer LAN IP (same Wi-Fi as phone):
+
+```bash
+set EXPO_PUBLIC_API_BASE_URL=http://<YOUR_PC_IP>:3000/api
+npm run start -- --clear
+```
+
+### 5) Run tests (Docker CI-style)
+
+```bash
+npm run docker:test
+```
+
+### 6) Stop Docker services
 
 ```bash
 npm run docker:down
@@ -36,6 +62,98 @@ npm run docker:down
 Notes:
 - DB schema auto-initializes from `database/schema.sql` on first startup.
 - To fully reset DB data: `docker compose down -v` then `npm run docker:up`.
+- `10.0.2.2` works for Android emulator only; real devices must use your computer IP.
+
+## Scanner Backend APIs
+
+The scanner feature is powered by barcode-focused APIs for real-time lookup and cart linkage.
+
+- `POST /api/scanner/lookup`
+	- Purpose: Find a product by scanned barcode and return product details.
+	- Auth: Optional (works without token).
+	- Body:
+		```json
+		{
+			"barcode": "1234567890123"
+		}
+		```
+	- Success response includes: `id`, `name`, `picture`, `brand`, `category`, `nutritional_info`, `nutrition_grade`, `price`, `quantity`, `barcode`.
+	- Error codes: `BARCODE_REQUIRED`, `BARCODE_INVALID_FORMAT`, `PRODUCT_NOT_FOUND`.
+
+- `POST /api/scanner/add-to-cart`
+	- Purpose: Scan by barcode and directly add the matched product to the current user's cart.
+	- Auth: Required (`Authorization: Bearer <token>`).
+	- Body:
+		```json
+		{
+			"barcode": "1234567890123",
+			"quantity": 1
+		}
+		```
+	- Error codes: `BARCODE_REQUIRED`, `BARCODE_INVALID_FORMAT`, `INVALID_QUANTITY`, `PRODUCT_NOT_FOUND`, `INSUFFICIENT_STOCK`.
+
+All scanner requests are logged into `scan_events` for diagnostics and demo traceability.
+
+## Local Testing (Frontend + Backend)
+
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+> On Windows PowerShell with execution policy restrictions, use:
+
+```bash
+npm.cmd install
+```
+
+### 2) Run unit tests locally
+
+```bash
+# run all tests
+npm run test
+
+# run frontend tests only
+npm run test:frontend
+
+# run backend tests only
+npm run test:backend
+
+# run coverage report
+npm run test:coverage
+
+# run tests in Docker (CI/CD-friendly)
+npm run docker:test
+```
+
+Current local baseline includes:
+- Frontend unit tests:
+	- `frontend/lib/cartUtils.test.ts`
+	- `frontend/lib/auth.test.ts`
+	- `frontend/lib/api.test.ts`
+	- `frontend/lib/mockData.test.ts`
+- Backend unit tests:
+	- `backend/controllers/auth.controller.test.js`
+	- `backend/controllers/product.controller.test.js`
+	- `backend/controllers/cart.controller.test.js`
+	- `backend/controllers/user.controller.test.js`
+	- `backend/controllers/scanner.controller.test.js`
+	- `backend/middleware/auth.test.js`
+	- `backend/middleware/roles.test.js`
+
+Coverage is collected for frontend `lib` modules and all core backend controllers/middleware, with a global minimum threshold of 20% (branches/functions/lines/statements) to satisfy project requirements.
+
+### 3) Manual integration checks (recommended)
+
+For local end-to-end validation before final demo:
+- Start backend and DB: `npm run docker:up`
+- Start app: `npm run start`
+- Verify scanner flow on a real phone:
+	- camera permission prompt appears
+	- barcode lookup returns product detail
+	- unknown barcode returns clear error feedback
+	- scan-to-cart updates cart successfully
 
 ## Project Overview
 

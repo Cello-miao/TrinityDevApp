@@ -1,11 +1,37 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { NativeModules, Platform } from 'react-native';
 import { Product, User } from '../types';
 
 // Configure API base URL - adjust according to your environment
 // For Android emulator: use 10.0.2.2 to access host localhost
 // For iOS simulator/device: use your computer's IP address
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.0.2.2:3000/api';
+const getApiBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+
+  const hostUri = Constants.expoConfig?.hostUri;
+  const hostFromExpo = hostUri?.split(':')[0];
+  if (hostFromExpo) {
+    return `http://${hostFromExpo}:3000/api`;
+  }
+
+  const scriptURL = NativeModules.SourceCode?.scriptURL as string | undefined;
+  const hostMatch = scriptURL?.match(/^(?:https?|exp):\/\/([^/:]+)(?::\d+)?/);
+
+  if (hostMatch?.[1]) {
+    return `http://${hostMatch[1]}:3000/api`;
+  }
+
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3000/api';
+  }
+
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Data transformation function: convert backend product data to frontend Product type
 const transformProduct = (dbProduct: any): Product => {
@@ -40,9 +66,9 @@ const apiRequest = async (
   try {
     const token = await AsyncStorage.getItem('token');
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...((options.headers as Record<string, string>) || {}),
     };
 
     if (token) {
