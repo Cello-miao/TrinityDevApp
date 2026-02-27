@@ -10,29 +10,46 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Order } from '../types';
+import { User } from '../types';
 import { logout } from '../lib/auth';
+import { userAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   const loadUserData = async () => {
     try {
-      const userStr = await AsyncStorage.getItem('user');
-      if (userStr) {
-        setUser(JSON.parse(userStr));
-      }
+      setLoading(true);
+      const userData = await userAPI.getProfile();
+      setUser(userData);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
       
       // Load order count
       const ordersStr = await AsyncStorage.getItem('orders');
       if (ordersStr) {
-        const orders: Order[] = JSON.parse(ordersStr);
+        const orders = JSON.parse(ordersStr);
         setOrderCount(orders.length);
+      }
+
+      // Load favorites count
+      const favoritesStr = await AsyncStorage.getItem('favorites');
+      if (favoritesStr) {
+        const favorites = JSON.parse(favoritesStr);
+        setFavoritesCount(favorites.length);
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
+      // Fallback to local storage
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        setUser(JSON.parse(userStr));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -70,10 +87,10 @@ export default function ProfileScreen({ navigation }: any) {
               <Ionicons name="person-outline" size={40} color="#fff" />
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.name || 'xinxin'}</Text>
+              <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
               <View style={styles.emailContainer}>
                 <Ionicons name="mail-outline" size={16} color="#cbd5e1" />
-                <Text style={styles.userEmail}>{user?.email || 'xinxin@123.com'}</Text>
+                <Text style={styles.userEmail}>{user?.email || 'guest@example.com'}</Text>
               </View>
             </View>
           </View>
@@ -85,7 +102,7 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.statLabel}>Orders</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statValue}>{favoritesCount}</Text>
               <Text style={styles.statLabel}>Favorites</Text>
             </View>
             <View style={styles.statItem}>
@@ -117,22 +134,15 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: '#fce7f3' }]}>
-                <Ionicons name="bag-outline" size={24} color="#ec4899" />
-              </View>
-              <Text style={styles.menuText}>My Favorites</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Favorites')}
+          >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: '#fee2e2' }]}>
                 <Ionicons name="heart-outline" size={24} color="#ef4444" />
               </View>
-              <Text style={styles.menuText}>Following</Text>
+              <Text style={styles.menuText}>My Favorites</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>

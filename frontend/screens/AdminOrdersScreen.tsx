@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { Order } from '../types';
-import { logout } from '../lib/auth';
 
 interface OrderWithCustomer extends Order {
   customerName: string;
@@ -22,9 +22,11 @@ export default function AdminOrdersScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadOrders();
+    }, [])
+  );
 
   const loadOrders = async () => {
     try {
@@ -32,7 +34,7 @@ export default function AdminOrdersScreen({ navigation }: any) {
       if (ordersStr) {
         const allOrders: Order[] = JSON.parse(ordersStr);
         
-        // Add mock customer data
+        // Use actual customer data if available, otherwise fallback to mock data
         const ordersWithCustomers: OrderWithCustomer[] = allOrders.map((order, index) => {
           const customers = [
             { name: 'John Doe', email: 'john.doe@email.com' },
@@ -40,12 +42,12 @@ export default function AdminOrdersScreen({ navigation }: any) {
             { name: 'Mike Wilson', email: 'mike.wilson@email.com' },
             { name: 'Sarah Jones', email: 'sarah.jones@email.com' },
           ];
-          const customer = customers[index % customers.length];
+          const mockCustomer = customers[index % customers.length];
           
           return {
             ...order,
-            customerName: customer.name,
-            customerEmail: customer.email,
+            customerName: order.customerName || mockCustomer.name,
+            customerEmail: order.customerEmail || mockCustomer.email,
           };
         });
         
@@ -54,11 +56,6 @@ export default function AdminOrdersScreen({ navigation }: any) {
     } catch (error) {
       console.error('Failed to load orders:', error);
     }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigation.replace('Login');
   };
 
   const filteredOrders = orders.filter(order =>
@@ -102,22 +99,10 @@ export default function AdminOrdersScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Manage your store</Text>
-        </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#94a3b8" />
+          <Ionicons name="search" size={20} color="#64748b" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search..."
@@ -128,11 +113,11 @@ export default function AdminOrdersScreen({ navigation }: any) {
         </View>
 
         {/* Orders List */}
-        {filteredOrders.map((order) => {
+        {filteredOrders.map((order, index) => {
           const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
           
           return (
-            <View key={order.id} style={styles.orderCard}>
+            <View key={`order-${index}-${order.id}`} style={styles.orderCard}>
               <View style={styles.orderHeader}>
                 <View style={styles.orderHeaderLeft}>
                   <Text style={styles.orderId}>#ORD-{order.id.slice(0, 3)}</Text>
@@ -177,18 +162,12 @@ export default function AdminOrdersScreen({ navigation }: any) {
         >
           <View style={styles.navIconContainer}>
             <Ionicons name="cube-outline" size={24} color="#94a3b8" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>30</Text>
-            </View>
           </View>
           <Text style={[styles.navText, styles.navTextInactive]}>Products</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
           <View style={styles.navIconContainer}>
             <Ionicons name="receipt" size={24} color="#475569" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>{orders.length}</Text>
-            </View>
           </View>
           <Text style={styles.navText}>Orders</Text>
         </TouchableOpacity>
@@ -198,11 +177,17 @@ export default function AdminOrdersScreen({ navigation }: any) {
         >
           <View style={styles.navIconContainer}>
             <Ionicons name="people-outline" size={24} color="#94a3b8" />
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>5</Text>
-            </View>
           </View>
           <Text style={[styles.navText, styles.navTextInactive]}>Customers</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('AdminProfile')}
+        >
+          <View style={styles.navIconContainer}>
+            <Ionicons name="person-outline" size={24} color="#94a3b8" />
+          </View>
+          <Text style={[styles.navText, styles.navTextInactive]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -214,59 +199,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    backgroundColor: '#475569',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#cbd5e1',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#5a6c7d',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   scrollView: {
     flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3e4f5e',
+    backgroundColor: '#e2e8f0',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 24,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#fff',
+    color: '#1e293b',
   },
   orderCard: {
     backgroundColor: '#fff',
@@ -348,22 +298,6 @@ const styles = StyleSheet.create({
   navIconContainer: {
     position: 'relative',
     marginBottom: 4,
-  },
-  navBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -10,
-    backgroundColor: '#475569',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  navBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   navText: {
     fontSize: 12,

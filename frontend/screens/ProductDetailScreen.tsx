@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,48 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const { product } = route.params as { product: Product };
   const [quantity, setQuantity] = useState(1);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    checkFavoriteStatus();
+  }, []);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const favoritesStr = await AsyncStorage.getItem('favorites');
+      if (favoritesStr) {
+        const favorites = JSON.parse(favoritesStr);
+        setIsFavorite(favorites.some((p: Product) => p.id === product.id));
+      }
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    try {
+      const favoritesStr = await AsyncStorage.getItem('favorites');
+      let favorites = favoritesStr ? JSON.parse(favoritesStr) : [];
+      
+      if (isFavorite) {
+        favorites = favorites.filter((p: Product) => p.id !== product.id);
+      } else {
+        favorites.push(product);
+      }
+      
+      await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   const handleAddToCart = async () => {
     try {
@@ -31,7 +67,19 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <ScrollView>
-        <Image source={{ uri: product.image }} style={styles.image} />
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: product.image }} style={styles.image} />
+          <TouchableOpacity 
+            style={styles.favoriteButton}
+            onPress={toggleFavorite}
+          >
+            <Ionicons 
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={28} 
+              color={isFavorite ? "#ef4444" : "#1e293b"} 
+            />
+          </TouchableOpacity>
+        </View>
         
         <View style={styles.content}>
           <Text style={styles.name}>{product.name}</Text>
@@ -64,6 +112,34 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
           <Text style={styles.sectionTitle}>Product Description</Text>
           <Text style={styles.description}>{product.description}</Text>
+
+          {product.brand && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Brand:</Text>
+              <Text style={styles.infoValue}>{product.brand}</Text>
+            </View>
+          )}
+
+          {product.nutritionalInfo && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>Nutritional Information</Text>
+              {product.nutritionalInfo.nutriscore_grade && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Nutri-Score:</Text>
+                  <Text style={[styles.infoValue, { textTransform: 'uppercase', fontWeight: 'bold' }]}>
+                    {product.nutritionalInfo.nutriscore_grade}
+                  </Text>
+                </View>
+              )}
+              {product.nutritionalInfo.energy_100g && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Energy (100g):</Text>
+                  <Text style={styles.infoValue}>{product.nutritionalInfo.energy_100g} kcal</Text>
+                </View>
+              )}
+            </>
+          )}
 
           {product.barcode && (
             <>
@@ -113,10 +189,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  imageContainer: {
+    position: 'relative',
+  },
   image: {
     width: '100%',
     height: 300,
     backgroundColor: '#f1f5f9',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   content: {
     padding: 20,
@@ -188,6 +283,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     marginLeft: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1e293b',
   },
   bottomBar: {
     flexDirection: 'row',

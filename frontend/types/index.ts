@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   address?: string;
   role: 'customer' | 'admin';
 }
@@ -17,6 +17,8 @@ export interface Product {
   barcode?: string;
   stock: number;
   discount?: number;
+  brand?: string;
+  nutritionalInfo?: any;
 }
 
 export interface CartItem {
@@ -29,10 +31,12 @@ export interface Order {
   userId: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'processing' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'delivered' | 'cancelled' | 'completed';
   createdAt: string;
   deliveryAddress: string;
   paymentMethod: string;
+  customerName?: string;
+  customerEmail?: string;
 }
 
 export interface Customer {

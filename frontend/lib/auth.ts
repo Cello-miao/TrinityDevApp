@@ -1,22 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
+import { authAPI } from './api';
 
 export const login = async (email: string, password: string): Promise<User | null> => {
   try {
-    // 模拟API调用
-    // 在实际应用中，这里应该调用后端API
-    if (email && password) {
-      const user: User = {
-        id: '1',
-        name: 'Customer User',
-        email: email,
-        phone: '1234567890',
-        role: 'customer',
-      };
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-      return user;
-    }
-    return null;
+    const { user, token } = await authAPI.login(email, password);
+    return user;
   } catch (error) {
     console.error('Login error:', error);
     return null;
@@ -30,24 +19,22 @@ export const register = async (
   password: string
 ): Promise<User | null> => {
   try {
-    const user: User = {
-      id: Date.now().toString(),
-      name,
-      email,
-      phone,
-      role: 'customer',
-    };
-    await AsyncStorage.setItem('user', JSON.stringify(user));
+    console.log('Attempting to register:', { name, email, phone });
+    const { user, token } = await authAPI.register(name, email, phone, password);
+    console.log('Registration successful:', user);
     return user;
   } catch (error) {
     console.error('Register error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+    }
     return null;
   }
 };
 
 export const logout = async (): Promise<void> => {
   try {
-    await AsyncStorage.multiRemove(['user', 'cart']);
+    await AsyncStorage.multiRemove(['user', 'cart', 'token']);
   } catch (error) {
     console.error('Logout error:', error);
   }

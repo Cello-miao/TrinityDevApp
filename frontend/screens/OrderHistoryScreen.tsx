@@ -22,7 +22,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       const ordersStr = await AsyncStorage.getItem('orders');
       if (ordersStr) {
         const allOrders: Order[] = JSON.parse(ordersStr);
-        // 按日期倒序排列
+        // Sort by date in descending order
         const sortedOrders = allOrders.sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );

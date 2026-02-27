@@ -11,21 +11,35 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { mockProducts } from '../lib/mockData';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
+import { productAPI } from '../lib/api';
 
 const { width } = Dimensions.get('window');
 
 export default function CategoryProductsScreen({ route, navigation }: any) {
   const { category } = route.params;
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Filter products by category - for demo, we'll show all products
-    // In a real app, you would filter by category
-    setProducts(mockProducts);
+    loadProducts();
   }, [category]);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productAPI.getAllProducts();
+      // Filter by category if needed
+      const filtered = data.filter(p => p.category === category.name);
+      setProducts(filtered.length > 0 ? filtered : data);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      Alert.alert('Error', 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddToCart = async (product: Product) => {
     try {
@@ -44,7 +58,6 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
           <Ionicons name="arrow-back" size={24} color="#1e293b" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
           <Text style={styles.categoryName}>{category.name}</Text>
         </View>
         <View style={{ width: 24 }} />
@@ -130,9 +143,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  categoryEmoji: {
-    fontSize: 24,
   },
   categoryName: {
     fontSize: 18,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,56 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const categories = [
-  { name: 'Fresh Produce', icon: '🥕', emoji: '🥕' },
-  { name: 'Bakery', icon: '🥖', emoji: '🥖' },
-  { name: 'Dairy & Eggs', icon: '🧀', emoji: '🧀' },
-  { name: 'Meat & Seafood', icon: '🥩', emoji: '🥩' },
-  { name: 'Frozen', icon: '🧊', emoji: '🧊' },
-  { name: 'Pantry', icon: '🥫', emoji: '🥫' },
-  { name: 'Beverages', icon: '☕', emoji: '☕' },
-  { name: 'Snacks', icon: '🍿', emoji: '🍿' },
-  { name: 'Health & Beauty', icon: '💄', emoji: '💄' },
-  { name: 'Household', icon: '🧹', emoji: '🧹' },
-];
+import { useFocusEffect } from '@react-navigation/native';
+import { productAPI } from '../lib/api';
 
 export default function SearchScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories();
+    }, [])
+  );
+
+  const loadCategories = async () => {
+    try {
+      const products = await productAPI.getAllProducts();
+      
+      const CATEGORY_META: Record<string, { emoji: string }> = {
+        'Fresh Produce': { emoji: '🥕' },
+        'Bakery': { emoji: '🥖' },
+        'Dairy & Eggs': { emoji: '🧀' },
+        'Meat & Seafood': { emoji: '🥩' },
+        'Beverages': { emoji: '☕' },
+        'Snacks': { emoji: '🍿' },
+        'Health & Beauty': { emoji: '💄' },
+        'Household': { emoji: '🧹' },
+        'Frozen': { emoji: '🧊' },
+        'Pantry': { emoji: '🥫' },
+        'Chocolates': { emoji: '🍫' },
+        'Spreads': { emoji: '🍯' },
+        'Breakfast': { emoji: '🥣' },
+        'Groceries': { emoji: '🛒' },
+      };
+
+      const categoryMap = new Map();
+      products.forEach(p => {
+        if (p.category && !categoryMap.has(p.category)) {
+          const meta = CATEGORY_META[p.category] || { emoji: '📦' };
+          categoryMap.set(p.category, {
+            name: p.category,
+            ...meta
+          });
+        }
+      });
+      
+      setDynamicCategories(Array.from(categoryMap.values()));
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,7 +86,9 @@ export default function SearchScreen({ navigation }: any) {
 
       {/* Categories List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {categories.map((category, index) => (
+        {dynamicCategories
+          .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          .map((category, index) => (
           <TouchableOpacity
             key={index}
             style={styles.categoryItem}
@@ -61,9 +97,6 @@ export default function SearchScreen({ navigation }: any) {
             }}
           >
             <View style={styles.categoryLeft}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-              </View>
               <Text style={styles.categoryName}>{category.name}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
@@ -127,18 +160,6 @@ const styles = StyleSheet.create({
   categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryEmoji: {
-    fontSize: 24,
   },
   categoryName: {
     fontSize: 16,

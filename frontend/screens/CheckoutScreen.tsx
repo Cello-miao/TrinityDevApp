@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   SafeAreaView,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,24 +18,116 @@ import { CartItem, Order } from '../types';
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as { cartItems: CartItem[]; total: number };
   
-  const [fullName, setFullName] = useState('');
+  // Billing Information (required fields)
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState('France');
+  
+  const [paymentMethod, setPaymentMethod] = useState<'paypal' | 'card' | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const deliveryFee = 5.0;
   const orderTotal = subtotal + deliveryFee;
 
-  const handlePlaceOrder = async () => {
-    if (!fullName || !email || !phone || !streetAddress || !city || !postalCode || !country) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
+  const validateForm = () => {
+    if (!firstName.trim()) {
+      Alert.alert('Validation Error', 'Please enter your first name');
+      return false;
     }
+    if (!lastName.trim()) {
+      Alert.alert('Validation Error', 'Please enter your last name');
+      return false;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
+      return false;
+    }
+    if (!streetAddress.trim()) {
+      Alert.alert('Validation Error', 'Please enter your street address');
+      return false;
+    }
+    if (!postalCode.trim()) {
+      Alert.alert('Validation Error', 'Please enter your postal code');
+      return false;
+    }
+    if (!city.trim()) {
+      Alert.alert('Validation Error', 'Please enter your city');
+      return false;
+    }
+    if (!paymentMethod) {
+      Alert.alert('Validation Error', 'Please select a payment method');
+      return false;
+    }
+    return true;
+  };
 
+  const processPayPalPayment = async () => {
+    // PayPal Integration
+    // In production, you would:
+    // 1. Create PayPal order via backend API
+    // 2. Get approval URL
+    // 3. Open PayPal web checkout
+    // 4. Handle redirect and capture payment
+    
+    try {
+      setIsProcessing(true);
+      
+      // Simulate PayPal API call
+      // In real implementation, call your backend endpoint that integrates with PayPal API
+      const paypalOrderData = {
+        amount: orderTotal.toFixed(2),
+        currency: 'EUR',
+        description: `Trinity Shop Order - ${cartItems.length} items`,
+        return_url: 'trinityshop://payment-success',
+        cancel_url: 'trinityshop://payment-cancel',
+      };
+
+      console.log('PayPal Order Data:', paypalOrderData);
+      
+      // For demonstration, use PayPal sandbox URL
+      // In production, replace with your backend API endpoint
+      const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?amount=${orderTotal.toFixed(2)}&currency=EUR`;
+      
+      Alert.alert(
+        'PayPal Payment',
+        'You will be redirected to PayPal to complete your payment.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setIsProcessing(false),
+          },
+          {
+            text: 'Continue',
+            onPress: async () => {
+              // Open PayPal checkout
+              const supported = await Linking.canOpenURL(paypalUrl);
+              if (supported) {
+                await Linking.openURL(paypalUrl);
+                // Simulate successful payment for demo
+                setTimeout(() => completeOrder('PayPal'), 3000);
+              } else {
+                Alert.alert('Error', 'Unable to open PayPal');
+                setIsProcessing(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('PayPal payment error:', error);
+      Alert.alert('Payment Error', 'Failed to process PayPal payment');
+      setIsProcessing(false);
+    }
+  };
+
+  const completeOrder = async (method: string) => {
     try {
       const userStr = await AsyncStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
@@ -43,10 +137,12 @@ export default function CheckoutScreen({ route, navigation }: any) {
         userId: user?.id || 'guest',
         items: cartItems,
         total: orderTotal,
-        status: 'pending',
+        status: 'completed',
         createdAt: new Date().toISOString(),
         deliveryAddress: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
-        paymentMethod: 'Cash on Delivery',
+        paymentMethod: method,
+        customerName: `${firstName} ${lastName}`,
+        customerEmail: email,
       };
 
       // Save order
@@ -58,9 +154,11 @@ export default function CheckoutScreen({ route, navigation }: any) {
       // Clear cart
       await AsyncStorage.setItem('cart', JSON.stringify([]));
 
+      setIsProcessing(false);
+
       Alert.alert(
-        'Order Successful',
-        `Your order has been placed!`,
+        'Order Successful! 🎉',
+        `Your order #${order.id} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
         [
           {
             text: 'View Orders',
@@ -69,7 +167,25 @@ export default function CheckoutScreen({ route, navigation }: any) {
         ]
       );
     } catch (error) {
+      setIsProcessing(false);
       Alert.alert('Error', 'Failed to place order, please try again');
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (paymentMethod === 'paypal') {
+      await processPayPalPayment();
+    } else if (paymentMethod === 'card') {
+      // For card payment, you would integrate Stripe or another payment processor
+      Alert.alert(
+        'Card Payment',
+        'Card payment integration coming soon. Please use PayPal.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -80,27 +196,40 @@ export default function CheckoutScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#1e293b" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Delivery Details</Text>
+        <Text style={styles.headerTitle}>Checkout</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Delivery Address Section */}
+        {/* Billing Information Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={20} color="#1e293b" />
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Ionicons name="document-text-outline" size={20} color="#1e293b" />
+            <Text style={styles.sectionTitle}>Billing Information</Text>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Full Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="John Doe"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholderTextColor="#94a3b8"
-            />
+          <View style={styles.rowInputs}>
+            <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
+              <Text style={styles.label}>First Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="John"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+
+            <View style={[styles.formGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Last Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Doe"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
           </View>
 
           <View style={styles.formGroup}>
@@ -113,6 +242,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                autoCapitalize="none"
                 placeholderTextColor="#94a3b8"
               />
             </View>
@@ -132,6 +262,14 @@ export default function CheckoutScreen({ route, navigation }: any) {
               />
             </View>
           </View>
+        </View>
+
+        {/* Delivery Address Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location-outline" size={20} color="#1e293b" />
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+          </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Street Address *</Text>
@@ -148,17 +286,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
 
           <View style={styles.rowInputs}>
             <View style={[styles.formGroup, { flex: 1, marginRight: 12 }]}>
-              <Text style={styles.label}>City *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Paris"
-                value={city}
-                onChangeText={setCity}
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>Postal Code *</Text>
               <TextInput
                 style={styles.input}
@@ -169,21 +296,90 @@ export default function CheckoutScreen({ route, navigation }: any) {
                 placeholderTextColor="#94a3b8"
               />
             </View>
+
+            <View style={[styles.formGroup, { flex: 1 }]}>
+              <Text style={styles.label}>City *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Paris"
+                value={city}
+                onChangeText={setCity}
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Country *</Text>
-            <View style={styles.selectContainer}>
-              <TextInput
-                style={[styles.input, styles.selectInput]}
-                placeholder="Select Country"
-                value={country}
-                onChangeText={setCountry}
-                placeholderTextColor="#94a3b8"
-              />
-              <Ionicons name="chevron-down" size={20} color="#64748b" style={styles.selectIcon} />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="France"
+              value={country}
+              onChangeText={setCountry}
+              placeholderTextColor="#94a3b8"
+            />
           </View>
+        </View>
+
+        {/* Payment Method Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="card-outline" size={20} color="#1e293b" />
+            <Text style={styles.sectionTitle}>Payment Method *</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.paymentOption,
+              paymentMethod === 'paypal' && styles.paymentOptionSelected,
+            ]}
+            onPress={() => setPaymentMethod('paypal')}
+          >
+            <View style={styles.paymentOptionLeft}>
+              <View style={[
+                styles.radioButton,
+                paymentMethod === 'paypal' && styles.radioButtonSelected,
+              ]}>
+                {paymentMethod === 'paypal' && <View style={styles.radioButtonInner} />}
+              </View>
+              <Ionicons name="logo-paypal" size={24} color="#0070ba" />
+              <Text style={styles.paymentOptionText}>PayPal</Text>
+            </View>
+            {paymentMethod === 'paypal' && (
+              <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.paymentOption,
+              paymentMethod === 'card' && styles.paymentOptionSelected,
+            ]}
+            onPress={() => setPaymentMethod('card')}
+          >
+            <View style={styles.paymentOptionLeft}>
+              <View style={[
+                styles.radioButton,
+                paymentMethod === 'card' && styles.radioButtonSelected,
+              ]}>
+                {paymentMethod === 'card' && <View style={styles.radioButtonInner} />}
+              </View>
+              <Ionicons name="card-outline" size={24} color="#475569" />
+              <Text style={styles.paymentOptionText}>Credit/Debit Card</Text>
+            </View>
+            {paymentMethod === 'card' && (
+              <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+            )}
+          </TouchableOpacity>
+
+          {paymentMethod === 'paypal' && (
+            <View style={styles.paymentInfo}>
+              <Ionicons name="information-circle-outline" size={18} color="#0070ba" />
+              <Text style={styles.paymentInfoText}>
+                You will be redirected to PayPal to complete your payment securely.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Order Summary Section */}
@@ -226,8 +422,21 @@ export default function CheckoutScreen({ route, navigation }: any) {
 
       {/* Place Order Button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder}>
-          <Text style={styles.placeOrderText}>Place Order</Text>
+        <TouchableOpacity 
+          style={[styles.placeOrderButton, isProcessing && styles.placeOrderButtonDisabled]} 
+          onPress={handlePlaceOrder}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.placeOrderText}>
+                {paymentMethod === 'paypal' ? 'Pay with PayPal' : 'Place Order'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -402,11 +611,75 @@ const styles = StyleSheet.create({
     backgroundColor: '#475569',
     paddingVertical: 16,
     borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  placeOrderButtonDisabled: {
+    backgroundColor: '#94a3b8',
   },
   placeOrderText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+    marginLeft: 8,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  paymentOptionSelected: {
+    borderColor: '#10b981',
+    backgroundColor: '#f0fdf4',
+  },
+  paymentOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  paymentOptionText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1e293b',
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#10b981',
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10b981',
+  },
+  paymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#eff6ff',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+    gap: 8,
+  },
+  paymentInfoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1e40af',
+    lineHeight: 18,
   },
 });
