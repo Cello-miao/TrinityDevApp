@@ -1,5 +1,42 @@
 # Trinity Project Mobile Application Development Roadmap
 
+## Quick Start (Docker + Android Emulator)
+
+This project uses a split setup:
+- root `package.json`: Expo mobile app
+- `backend/package.json`: Express API server
+
+Having both root and `backend` `node_modules` / `package-lock.json` is expected.
+
+### 1) Start backend + database with Docker
+
+```bash
+npm install
+npm run docker:up
+npm run docker:logs
+```
+
+### 2) Run app on Android emulator
+
+In another terminal at repo root:
+
+```bash
+set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000/api
+npm run start
+```
+
+Then press `a` in Metro to open Android.
+
+### 3) Stop Docker services
+
+```bash
+npm run docker:down
+```
+
+Notes:
+- DB schema auto-initializes from `database/schema.sql` on first startup.
+- To fully reset DB data: `docker compose down -v` then `npm run docker:up`.
+
 ## Project Overview
 
 Our team of three developers will collaborate over an eight-week period to build a React Native mobile application for a grocery chain. This application is designed to optimize the customer purchasing process through integrated product scanning and secure mobile payments. The project will be managed using ClickUp to track individual tasks and overall progress across our three primary Git branches: the **document** branch for technical deliverables, the **dev** branch for the source code, and the **prod** branch for client-ready production releases.

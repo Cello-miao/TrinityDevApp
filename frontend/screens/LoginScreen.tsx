@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,24 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../lib/auth';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Clear old data
+  useEffect(() => {
+    const clearOldData = async () => {
+      try {
+        await AsyncStorage.multiRemove(['user', 'token', 'cart']);
+      } catch (error) {
+        console.error('Failed to clear old data:', error);
+      }
+    };
+    clearOldData();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -25,14 +38,12 @@ export default function LoginScreen({ navigation }: any) {
     // Check if admin login
     if (email === 'admin@trinity.com' && password === 'admin123') {
       // Admin login - navigate to admin dashboard
-      const adminUser = {
-        id: 'admin-001',
-        name: 'Admin',
-        email: 'admin@trinity.com',
-        role: 'admin',
-      };
-      await login(email, password); // Save to storage
-      navigation.replace('AdminDashboard');
+      const user = await login(email, password);
+      if (user) {
+        navigation.replace('AdminDashboard');
+      } else {
+        Alert.alert('Error', 'Admin login failed');
+      }
       return;
     }
 

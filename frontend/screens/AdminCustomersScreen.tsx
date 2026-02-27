@@ -7,24 +7,25 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Order } from '../types';
 import { logout } from '../lib/auth';
+import { userAPI } from '../lib/api';
+import { User } from '../types';
 
 interface Customer {
   id: string;
   name: string;
   email: string;
-  registeredDate: string;
-  totalSpent: number;
-  orderCount: number;
+  phone?: string;
+  role: string;
 }
 
 export default function AdminCustomersScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCustomers();
@@ -32,55 +33,14 @@ export default function AdminCustomersScreen({ navigation }: any) {
 
   const loadCustomers = async () => {
     try {
-      const ordersStr = await AsyncStorage.getItem('orders');
-      
-      // Mock customer data based on orders
-      const mockCustomers: Customer[] = [
-        {
-          id: '1',
-          name: 'John Doe',
-          email: 'john.doe@email.com',
-          registeredDate: '2025-11-15',
-          totalSpent: 524.50,
-          orderCount: 5,
-        },
-        {
-          id: '2',
-          name: 'Jane Smith',
-          email: 'jane.smith@email.com',
-          registeredDate: '2025-12-03',
-          totalSpent: 892.30,
-          orderCount: 8,
-        },
-        {
-          id: '3',
-          name: 'Mike Wilson',
-          email: 'mike.wilson@email.com',
-          registeredDate: '2026-01-10',
-          totalSpent: 267.80,
-          orderCount: 3,
-        },
-        {
-          id: '4',
-          name: 'Sarah Jones',
-          email: 'sarah.jones@email.com',
-          registeredDate: '2026-02-01',
-          totalSpent: 145.90,
-          orderCount: 2,
-        },
-        {
-          id: '5',
-          name: 'David Brown',
-          email: 'david.brown@email.com',
-          registeredDate: '2025-10-22',
-          totalSpent: 1456.70,
-          orderCount: 12,
-        },
-      ];
-      
-      setCustomers(mockCustomers);
+      setLoading(true);
+      const users = await userAPI.getAllUsers();
+      setCustomers(users);
     } catch (error) {
       console.error('Failed to load customers:', error);
+      Alert.alert('Error', 'Failed to load customers');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,14 +87,13 @@ export default function AdminCustomersScreen({ navigation }: any) {
             <View style={styles.customerHeader}>
               <Text style={styles.customerName}>{customer.name}</Text>
               <View style={styles.customerHeaderRight}>
-                <Text style={styles.totalSpent}>€{customer.totalSpent.toFixed(2)}</Text>
-                <Text style={styles.orderCount}>{customer.orderCount} orders</Text>
+                <Text style={styles.customerRole}>{customer.role}</Text>
               </View>
             </View>
             <Text style={styles.customerEmail}>{customer.email}</Text>
-            <Text style={styles.registeredDate}>
-              Registered: {customer.registeredDate}
-            </Text>
+            {customer.phone && (
+              <Text style={styles.customerPhone}>Phone: {customer.phone}</Text>
+            )}
           </View>
         ))}
 
@@ -270,16 +229,21 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     marginBottom: 4,
   },
-  orderCount: {
+  customerRole: {
     fontSize: 13,
-    color: '#64748b',
+    color: '#475569',
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    fontWeight: '600',
   },
   customerEmail: {
     fontSize: 14,
     color: '#64748b',
     marginBottom: 6,
   },
-  registeredDate: {
+  customerPhone: {
     fontSize: 13,
     color: '#94a3b8',
   },

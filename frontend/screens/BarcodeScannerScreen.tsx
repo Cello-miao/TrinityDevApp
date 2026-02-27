@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { mockProducts } from '../lib/mockData';
+import { productAPI } from '../lib/api';
 
 export default function BarcodeScannerScreen({ navigation }: any) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -44,33 +44,48 @@ export default function BarcodeScannerScreen({ navigation }: any) {
     ).start();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }: any) => {
+  const handleBarCodeScanned = async ({ type, data }: any) => {
     setScanned(true);
     
-    // Find product by barcode in mock data
-    const product = mockProducts.find(p => p.barcode === data);
+    try {
+      // Find product by barcode from API
+      const products = await productAPI.getAllProducts();
+      const product = products.find(p => p.barcode === data);
     
-    if (product) {
-      Alert.alert(
-        'Product Found',
-        `${product.name}`,
-        [
-          {
-            text: 'View Details',
-            onPress: () => {
-              navigation.replace('ProductDetail', { product });
+      if (product) {
+        Alert.alert(
+          'Product Found',
+          `${product.name}`,
+          [
+            {
+              text: 'View Details',
+              onPress: () => {
+                navigation.replace('ProductDetail', { product });
+              },
             },
-          },
-          {
-            text: 'Continue Scanning',
-            onPress: () => setScanned(false),
-          },
-        ]
-      );
-    } else {
+            {
+              text: 'Continue Scanning',
+              onPress: () => setScanned(false),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Product Not Found',
+          `Barcode: ${data}`,
+          [
+            {
+              text: 'Continue Scanning',
+              onPress: () => setScanned(false),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error scanning barcode:', error);
       Alert.alert(
-        'Product Not Found',
-        `Barcode: ${data}`,
+        'Error',
+        'Failed to find product',
         [
           {
             text: 'Continue Scanning',

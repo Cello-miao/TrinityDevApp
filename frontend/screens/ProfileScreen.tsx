@@ -10,29 +10,31 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Order } from '../types';
+import { User } from '../types';
 import { logout } from '../lib/auth';
+import { userAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
+      const userData = await userAPI.getProfile();
+      setUser(userData);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+      // Fallback to local storage
       const userStr = await AsyncStorage.getItem('user');
       if (userStr) {
         setUser(JSON.parse(userStr));
       }
-      
-      // Load order count
-      const ordersStr = await AsyncStorage.getItem('orders');
-      if (ordersStr) {
-        const orders: Order[] = JSON.parse(ordersStr);
-        setOrderCount(orders.length);
-      }
-    } catch (error) {
-      console.error('Failed to load user data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -70,10 +72,10 @@ export default function ProfileScreen({ navigation }: any) {
               <Ionicons name="person-outline" size={40} color="#fff" />
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.name || 'xinxin'}</Text>
+              <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
               <View style={styles.emailContainer}>
                 <Ionicons name="mail-outline" size={16} color="#cbd5e1" />
-                <Text style={styles.userEmail}>{user?.email || 'xinxin@123.com'}</Text>
+                <Text style={styles.userEmail}>{user?.email || 'guest@example.com'}</Text>
               </View>
             </View>
           </View>
@@ -81,7 +83,7 @@ export default function ProfileScreen({ navigation }: any) {
           {/* Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{orderCount}</Text>
+              <Text style={styles.statValue}>0</Text>
               <Text style={styles.statLabel}>Orders</Text>
             </View>
             <View style={styles.statItem}>
