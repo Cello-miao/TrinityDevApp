@@ -9,9 +9,9 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Order } from '../types';
+import { orderAPI } from '../lib/api';
 
 interface OrderWithCustomer extends Order {
   customerName: string;
@@ -30,31 +30,11 @@ export default function AdminOrdersScreen({ navigation }: any) {
 
   const loadOrders = async () => {
     try {
-      const ordersStr = await AsyncStorage.getItem('orders');
-      if (ordersStr) {
-        const allOrders: Order[] = JSON.parse(ordersStr);
-        
-        // Use actual customer data if available, otherwise fallback to mock data
-        const ordersWithCustomers: OrderWithCustomer[] = allOrders.map((order, index) => {
-          const customers = [
-            { name: 'John Doe', email: 'john.doe@email.com' },
-            { name: 'Jane Smith', email: 'jane.smith@email.com' },
-            { name: 'Mike Wilson', email: 'mike.wilson@email.com' },
-            { name: 'Sarah Jones', email: 'sarah.jones@email.com' },
-          ];
-          const mockCustomer = customers[index % customers.length];
-          
-          return {
-            ...order,
-            customerName: order.customerName || mockCustomer.name,
-            customerEmail: order.customerEmail || mockCustomer.email,
-          };
-        });
-        
-        setOrders(ordersWithCustomers);
-      }
+      const allOrders = await orderAPI.getAllOrders();
+      setOrders(allOrders as OrderWithCustomer[]);
     } catch (error) {
       console.error('Failed to load orders:', error);
+      setOrders([]);
     }
   };
 

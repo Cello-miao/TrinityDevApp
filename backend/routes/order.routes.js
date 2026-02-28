@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/auth");
-const { createOrder, getMyOrders } = require("../controllers/order.controller");
+const authorizeRoles = require("../middleware/roles");
+const { createOrder, getMyOrders, getAllOrders } = require("../controllers/order.controller");
 
 router.post("/", verifyToken, createOrder);
 router.get("/me", verifyToken, getMyOrders);
+router.get("/", verifyToken, authorizeRoles("admin"), getAllOrders);
 
 module.exports = router;

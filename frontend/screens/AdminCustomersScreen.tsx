@@ -10,8 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { userAPI } from '../lib/api';
+import { userAPI, orderAPI } from '../lib/api';
 import { User, Order } from '../types';
 
 interface Customer {
@@ -43,9 +42,8 @@ export default function AdminCustomersScreen({ navigation }: any) {
       setLoading(true);
       const users = await userAPI.getAllUsers();
       
-      // Load orders
-      const ordersStr = await AsyncStorage.getItem('orders');
-      const allOrders: Order[] = ordersStr ? JSON.parse(ordersStr) : [];
+      // Load all orders from API
+      const allOrders = await orderAPI.getAllOrders();
       
       // Calculate customer stats
       const customersWithOrders: CustomerWithOrders[] = users.map(user => {

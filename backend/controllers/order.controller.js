@@ -233,7 +233,52 @@ const getMyOrders = async (req, res) => {
   }
 };
 
+const getAllOrders = async (req, res) => {
+  try {
+    console.log('getAllOrders called by user:', req.user.id, 'role:', req.user.role);
+    const ordersResult = await pool.query(
+      `SELECT o.*, u.username, u.email as user_email
+       FROM orders o
+       LEFT JOIN users u ON o.user_id = u.id
+       ORDER BY o.created_at DESC`
+    );
+
+    if (ordersResult.rows.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const orderIds = ordersResult.rows.map((order) => order.id);
+    const itemsResult = await pool.query(
+      `SELECT *
+       FROM order_items
+       WHERE order_id = ANY($1::int[])
+       ORDER BY created_at ASC`,
+      [orderIds],
+    );
+
+    const itemsByOrderId = new Map();
+    for (const item of itemsResult.rows) {
+      if (!itemsByOrderId.has(item.order_id)) {
+        itemsByOrderId.set(item.order_id, []);
+      }
+      itemsByOrderId.get(item.order_id).push(item);
+    }
+
+    const ordersWithItems = ordersResult.rows.map((order) => ({
+      ...order,
+      items: itemsByOrderId.get(order.id) || [],
+    }));
+
+    console.log('getAllOrders returning', ordersWithItems.length, 'orders');
+    return res.status(200).json(ordersWithItems);
+  } catch (error) {
+    console.error('getAllOrders error:', error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
+  getAllOrders,
 };
