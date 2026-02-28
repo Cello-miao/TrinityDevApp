@@ -293,6 +293,10 @@ export const orderAPI = {
 
   getMyOrders: async (): Promise<Order[]> => {
     const data = await apiRequest('/orders/me', { method: 'GET' });
+    if (!Array.isArray(data)) {
+      console.error('getMyOrders: Expected array but got:', typeof data);
+      return [];
+    }
     return data.map(transformOrder);
   },
 };

@@ -12,35 +12,23 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { logout } from '../lib/auth';
-import { userAPI } from '../lib/api';
+import { userAPI, orderAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
+  const [activeOrderCount, setActiveOrderCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
 
   const loadUserData = async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
       const userData = await userAPI.getProfile();
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
-      
-      // Load order count
-      const ordersStr = await AsyncStorage.getItem('orders');
-      if (ordersStr) {
-        const orders = JSON.parse(ordersStr);
-        setOrderCount(orders.length);
-      }
-
-      // Load favorites count
-      const favoritesStr = await AsyncStorage.getItem('favorites');
-      if (favoritesStr) {
-        const favorites = JSON.parse(favoritesStr);
-        setFavoritesCount(favorites.length);
-      }
     } catch (error) {
       console.error('Failed to load user data:', error);
       // Fallback to local storage
@@ -48,9 +36,34 @@ export default function ProfileScreen({ navigation }: any) {
       if (userStr) {
         setUser(JSON.parse(userStr));
       }
-    } finally {
-      setLoading(false);
     }
+
+    // Load order count from API
+    try {
+      const userOrders = await orderAPI.getMyOrders();
+      setOrderCount(userOrders.length);
+      const activeOrders = userOrders.filter(
+        (order) => order.status === 'pending' || order.status === 'processing'
+      );
+      setActiveOrderCount(activeOrders.length);
+    } catch (err) {
+      console.error('Failed to load user orders:', err);
+      setOrderCount(0);
+      setActiveOrderCount(0);
+    }
+
+    // Load favorites count
+    try {
+      const favoritesStr = await AsyncStorage.getItem('favorites');
+      if (favoritesStr) {
+        const favorites = JSON.parse(favoritesStr);
+        setFavoritesCount(favorites.length);
+      }
+    } catch (err) {
+      console.error('Failed to load favorites:', err);
+    }
+
+    setLoading(false);
   };
 
   useFocusEffect(
@@ -125,9 +138,9 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.menuText}>My Orders</Text>
             </View>
             <View style={styles.menuRight}>
-              {orderCount > 0 && (
+              {activeOrderCount > 0 && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{orderCount}</Text>
+                  <Text style={styles.badgeText}>{activeOrderCount}</Text>
                 </View>
               )}
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
