@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
-import { addToCart } from '../lib/cartUtils';
+import { cartAPI } from '../lib/api';
 
 export default function ProductDetailScreen({ route, navigation }: any) {
   const { product } = route.params as { product: Product };
@@ -54,7 +54,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const handleAddToCart = async () => {
     try {
-      await addToCart(product, quantity);
+      await cartAPI.addToCart(product.id, quantity);
       Alert.alert('Success', 'Added to cart', [
         { text: 'Continue Shopping', onPress: () => navigation.goBack() },
         { text: 'View Cart', onPress: () => navigation.navigate('Cart') },

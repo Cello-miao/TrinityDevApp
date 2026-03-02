@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types';
-import { addToCart } from '../lib/cartUtils';
-import { productAPI } from '../lib/api';
+import { productAPI, cartAPI } from '../lib/api';
 
 const { width } = Dimensions.get('window');
 
@@ -43,7 +42,7 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
 
   const handleAddToCart = async (product: Product) => {
     try {
-      await addToCart(product, 1);
+      await cartAPI.addToCart(product.id, 1);
       Alert.alert('Success', `${product.name} added to cart!`);
     } catch (error) {
       Alert.alert('Error', 'Failed to add item to cart');
