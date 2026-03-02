@@ -15,7 +15,7 @@
     "web": "expo start --web",
     "test": "jest --runInBand",
     "test:frontend": "jest --selectProjects frontend --runInBand",
-    "test:backend": "jest --selectProjects backend --runInBand",
+    "test:backend": "npm --prefix backend ci --no-audit --no-fund && jest --selectProjects backend --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand"
   },
