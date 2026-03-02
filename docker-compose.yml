@@ -33,7 +33,7 @@ services:
       DB_PASSWORD: postgres
       DB_NAME: trinityshop
       DB_PORT: 5432
-      JWT_SECRET: dev_secret_change_me
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 3000
     ports:
       - "3000:3000"
