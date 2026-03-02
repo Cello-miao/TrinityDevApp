@@ -7,15 +7,17 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
-import { orderAPI } from '../lib/api';
+import { orderAPI, cartAPI } from '../lib/api';
 
 export default function OrderHistoryScreen({ navigation }: any) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
 
   const loadOrders = async () => {
     try {
@@ -48,8 +50,107 @@ export default function OrderHistoryScreen({ navigation }: any) {
     });
   };
 
+  const handleViewDetails = (order: Order) => {
+    navigation.navigate('OrderDetail', { order });
+  };
+
+  const handleBuyAgain = async (order: Order) => {
+    try {
+      setAddingToCart(order.id);
+      
+      console.log('=== BUY AGAIN DEBUG ===');
+      console.log('Order ID:', order.id);
+      console.log('Order items:', JSON.stringify(order.items, null, 2));
+      
+      // Filter out items with invalid product IDs (deleted products)
+      const validItems = order.items.filter(item => {
+        const hasValidId = item.product.id && item.product.id !== '' && item.product.id !== '0';
+        if (!hasValidId) {
+          console.log(`Skipping item with invalid product ID:`, item.product.name);
+        }
+        return hasValidId;
+      });
+      
+      if (validItems.length === 0) {
+        Alert.alert(
+          'Cannot Buy Again',
+          'All products in this order are no longer available.'
+        );
+        return;
+      }
+      
+      // Add all valid items from the order to cart
+      let successCount = 0;
+      let failedItems: string[] = [];
+      
+      for (const item of validItems) {
+        try {
+          console.log(`Adding item to cart:`, {
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            productIdType: typeof item.product.id
+          });
+          
+          const result = await cartAPI.addToCart(item.product.id, item.quantity);
+          console.log('Add to cart success:', result);
+          successCount++;
+        } catch (itemError: any) {
+          console.error(`Failed to add ${item.product.name}:`, itemError);
+          console.error('Error details:', JSON.stringify(itemError, null, 2));
+          failedItems.push(item.product.name);
+        }
+      }
+      
+      console.log(`Results: ${successCount} success, ${failedItems.length} failed`);
+      
+      if (successCount === 0) {
+        Alert.alert(
+          'Error',
+          'Failed to add items to cart. These products may no longer be available.'
+        );
+        return;
+      }
+      
+      if (failedItems.length > 0) {
+        Alert.alert(
+          'Partial Success',
+          `Added ${successCount} items to cart. Failed to add: ${failedItems.join(', ')}`,
+          [
+            { text: 'OK', style: 'cancel' },
+            { 
+              text: 'Go to Cart', 
+              onPress: () => navigation.navigate('Main', { screen: 'Cart' })
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Success',
+          `All ${successCount} items have been added to your cart!`,
+          [
+            { text: 'Continue Shopping', style: 'cancel' },
+            { 
+              text: 'Go to Cart', 
+              onPress: () => navigation.navigate('Main', { screen: 'Cart' })
+            }
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error('Buy again error:', error);
+      console.error('Error stack:', error.stack);
+      Alert.alert(
+        'Error',
+        `Failed: ${error.message || 'Unknown error'}. Check console for details.`
+      );
+    } finally {
+      setAddingToCart(null);
+    }
+  };
+
   const totalOrders = orders.length;
-  const completedOrders = orders.filter(o => o.status === 'delivered').length;
+  const completedOrders = orders.filter(o => o.status === 'completed').length;
   const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
 
   if (orders.length === 0) {
@@ -166,11 +267,20 @@ export default function OrderHistoryScreen({ navigation }: any) {
                   ))}
 
                   <View style={styles.orderActions}>
-                    <TouchableOpacity style={styles.viewDetailsButton}>
+                    <TouchableOpacity 
+                      style={styles.viewDetailsButton}
+                      onPress={() => handleViewDetails(order)}
+                    >
                       <Text style={styles.viewDetailsText}>View Details</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.buyAgainButton}>
-                      <Text style={styles.buyAgainText}>Buy Again</Text>
+                    <TouchableOpacity 
+                      style={styles.buyAgainButton}
+                      onPress={() => handleBuyAgain(order)}
+                      disabled={addingToCart === order.id}
+                    >
+                      <Text style={styles.buyAgainText}>
+                        {addingToCart === order.id ? 'Adding...' : 'Buy Again'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </>

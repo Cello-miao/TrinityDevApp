@@ -15,7 +15,9 @@ import ProductDetailScreen from './screens/ProductDetailScreen';
 import CartScreen from './screens/CartScreen';
 import CheckoutScreen from './screens/CheckoutScreen';
 import OrderHistoryScreen from './screens/OrderHistoryScreen';
+import OrderDetailScreen from './screens/OrderDetailScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
 import BarcodeScannerScreen from './screens/BarcodeScannerScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import AdminOrdersScreen from './screens/AdminOrdersScreen';
@@ -152,6 +154,16 @@ export default function App() {
             name="Checkout" 
             component={CheckoutScreen}
             options={{ title: 'Checkout' }}
+          />
+          <Stack.Screen 
+            name="OrderDetail" 
+            component={OrderDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfileScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen 
             name="Scanner" 

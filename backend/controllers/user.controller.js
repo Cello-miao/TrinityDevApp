@@ -57,7 +57,7 @@ const deleteUser = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await pool.query(
-      "SELECT id, username, email, first_name, last_name, phone_number, billing_address, billing_city, billing_country, role FROM users WHERE id = $1",
+      "SELECT id, username, email, first_name, last_name, phone_number, billing_address, billing_zip_code, billing_city, billing_country, role FROM users WHERE id = $1",
       [req.user.id],
     );
     res.status(200).json(user.rows[0]);
@@ -81,7 +81,7 @@ const updateProfile = async (req, res) => {
       `UPDATE users SET first_name=$1, last_name=$2, phone_number=$3, 
       billing_address=$4, billing_zip_code=$5, billing_city=$6, 
       billing_country=$7, updated_at=CURRENT_TIMESTAMP 
-      WHERE id=$8 RETURNING id, username, email, first_name, last_name, role`,
+      WHERE id=$8 RETURNING id, username, email, first_name, last_name, phone_number, billing_address, billing_zip_code, billing_city, billing_country, role`,
       [
         first_name,
         last_name,

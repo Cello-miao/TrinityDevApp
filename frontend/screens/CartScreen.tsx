@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CartItem } from '../types';
+import { CartItem, Product } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
+import { cartAPI } from '../lib/api';
 
 const DELIVERY_FEE = 10.0;
 const FREE_DELIVERY_THRESHOLD = 100.0;
@@ -21,15 +22,52 @@ const DISCOUNT_AMOUNT = 15.0;
 
 export default function CartScreen({ navigation }: any) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadCart = async () => {
+    setLoading(true);
     try {
-      const cartStr = await AsyncStorage.getItem('cart');
-      if (cartStr) {
-        setCartItems(JSON.parse(cartStr));
+      // Try to load from backend API first
+      const backendCart = await cartAPI.getCart();
+      console.log('Backend cart loaded:', backendCart);
+      
+      if (backendCart && Array.isArray(backendCart) && backendCart.length > 0) {
+        // Transform backend cart to CartItem format
+        const transformedCart: CartItem[] = backendCart.map((item: any) => ({
+          cartItemId: item.id, // Store cart item ID for deletion
+          quantity: item.quantity,
+          product: {
+            id: item.product_id?.toString() || '',
+            name: item.name || 'Unknown Product',
+            price: parseFloat(item.price) || 0,
+            image: item.picture || '',
+            category: '',
+            description: '',
+            stock: 0,
+          }
+        }));
+        
+        // Remove duplicates based on cartItemId
+        const uniqueCart = transformedCart.filter((item, index, self) => 
+          index === self.findIndex((t) => t.cartItemId === item.cartItemId)
+        );
+        
+        console.log('Transformed and deduplicated cart:', uniqueCart);
+        setCartItems(uniqueCart);
+        // Sync to local storage
+        await AsyncStorage.setItem('cart', JSON.stringify(uniqueCart));
+      } else {
+        // Backend cart is empty, clear local storage too
+        setCartItems([]);
+        await AsyncStorage.setItem('cart', JSON.stringify([]));
       }
     } catch (error) {
-      console.error('Failed to load cart:', error);
+      console.error('Failed to load cart from backend:', error);
+      // On error, clear cart to avoid inconsistency
+      setCartItems([]);
+      await AsyncStorage.setItem('cart', JSON.stringify([]));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,22 +78,67 @@ export default function CartScreen({ navigation }: any) {
   );
 
   const updateQuantity = async (productId: string, newQuantity: number) => {
-    const updatedCart = cartItems.map(item =>
-      item.product.id === productId
-        ? { ...item, quantity: newQuantity }
-        : item
-    ).filter(item => item.quantity > 0);
+    if (newQuantity <= 0) {
+      // If quantity is 0 or less, remove the item
+      await removeItem(productId);
+      return;
+    }
 
-    setCartItems(updatedCart);
-    await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
+    try {
+      const item = cartItems.find(i => i.product.id === productId);
+      if (item && item.cartItemId) {
+        // Update in backend
+        await cartAPI.updateCartItem(item.cartItemId.toString(), newQuantity);
+      }
+      
+      const updatedCart = cartItems.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+
+      setCartItems(updatedCart);
+      await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
+    } catch (error: any) {
+      console.error('Failed to update quantity:', error);
+      console.error('Error details:', error.message);
+      
+      // Reload cart from backend on error
+      try {
+        await loadCart();
+      } catch (reloadError) {
+        console.error('Failed to reload cart:', reloadError);
+      }
+      
+      Alert.alert('Error', `Failed to update quantity: ${error.message || 'Please try again.'}`);
+    }
   };
 
   const removeItem = async (productId: string) => {
-    const updatedCart = cartItems.filter(
-      item => item.product.id !== productId
-    );
-    setCartItems(updatedCart);
-    await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
+    try {
+      const item = cartItems.find(i => i.product.id === productId);
+      if (item && item.cartItemId) {
+        // Remove from backend
+        await cartAPI.removeFromCart(item.cartItemId.toString());
+      }
+      
+      const updatedCart = cartItems.filter(
+        item => item.product.id !== productId
+      );
+      setCartItems(updatedCart);
+      await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      
+      // Reload cart from backend on error
+      try {
+        await loadCart();
+      } catch (reloadError) {
+        console.error('Failed to reload cart:', reloadError);
+      }
+      
+      Alert.alert('Error', 'Failed to remove item from cart');
+    }
   };
 
   const subtotal = cartItems.reduce(
@@ -107,8 +190,8 @@ export default function CartScreen({ navigation }: any) {
         )}
 
         {/* Cart Items */}
-        {cartItems.map((item) => (
-          <View key={item.product.id} style={styles.cartItem}>
+        {cartItems.map((item, index) => (
+          <View key={item.cartItemId || `${item.product.id}-${index}`} style={styles.cartItem}>
             <Image
               source={{ uri: item.product.image }}
               style={styles.productImage}

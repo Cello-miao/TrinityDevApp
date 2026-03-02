@@ -51,9 +51,17 @@ const transformProduct = (dbProduct: any): Product => {
 const transformUser = (dbUser: any): User => {
   return {
     id: dbUser.id?.toString() || '',
+    username: dbUser.username || '',
     name: dbUser.username || `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim(),
     email: dbUser.email || '',
     phone: dbUser.phone_number || '',
+    phone_number: dbUser.phone_number || '',
+    first_name: dbUser.first_name || '',
+    last_name: dbUser.last_name || '',
+    billing_address: dbUser.billing_address || '',
+    billing_zip_code: dbUser.billing_zip_code || '',
+    billing_city: dbUser.billing_city || '',
+    billing_country: dbUser.billing_country || '',
     role: dbUser.role === 'admin' ? 'admin' : 'customer',
   };
 };
@@ -256,15 +264,27 @@ export const cartAPI = {
   },
 
   addToCart: async (productId: string, quantity: number): Promise<any> => {
+    console.log('cartAPI.addToCart called with:', { productId, quantity, productIdType: typeof productId });
+    const productIdNum = Number(productId);
+    console.log('Converted to number:', productIdNum);
+    
     const data = await apiRequest('/cart/add', {
       method: 'POST',
-      body: JSON.stringify({ product_id: productId, quantity }),
+      body: JSON.stringify({ product_id: productIdNum, quantity }),
     });
     return data;
   },
 
-  removeFromCart: async (productId: string): Promise<void> => {
-    await apiRequest(`/cart/remove/${productId}`, { method: 'DELETE' });
+  updateCartItem: async (cartItemId: string, quantity: number): Promise<any> => {
+    const data = await apiRequest(`/cart/update/${cartItemId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity }),
+    });
+    return data;
+  },
+
+  removeFromCart: async (cartItemId: string): Promise<void> => {
+    await apiRequest(`/cart/remove/${cartItemId}`, { method: 'DELETE' });
   },
 
   clearCart: async (): Promise<void> => {
@@ -329,15 +349,10 @@ export const userAPI = {
     return transformUser(data);
   },
 
-  updateProfile: async (userData: Partial<User>): Promise<User> => {
-    const dbUser = {
-      username: userData.name,
-      email: userData.email,
-      phone_number: userData.phone,
-    };
+  updateProfile: async (userData: any): Promise<User> => {
     const data = await apiRequest('/users/profile', {
       method: 'PUT',
-      body: JSON.stringify(dbUser),
+      body: JSON.stringify(userData),
     });
     return transformUser(data);
   },

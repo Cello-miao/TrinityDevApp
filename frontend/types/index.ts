@@ -1,10 +1,18 @@
 export interface User {
   id: string;
+  username?: string;
   name: string;
   email: string;
   phone?: string;
+  phone_number?: string;
+  first_name?: string;
+  last_name?: string;
+  billing_address?: string;
+  billing_zip_code?: string;
+  billing_city?: string;
+  billing_country?: string;
   address?: string;
-  role: 'customer' | 'admin';
+  role: 'user' | 'admin' | 'manager';
 }
 
 export interface Product {
@@ -24,6 +32,7 @@ export interface Product {
 export interface CartItem {
   product: Product;
   quantity: number;
+  cartItemId?: number; // Backend cart item ID for deletion
 }
 
 export interface Order {

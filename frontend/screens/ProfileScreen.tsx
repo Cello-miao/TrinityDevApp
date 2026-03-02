@@ -100,7 +100,7 @@ export default function ProfileScreen({ navigation }: any) {
               <Ionicons name="person-outline" size={40} color="#fff" />
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+              <Text style={styles.userName}>{user?.first_name || user?.name || 'Guest'}</Text>
               <View style={styles.emailContainer}>
                 <Ionicons name="mail-outline" size={16} color="#cbd5e1" />
                 <Text style={styles.userEmail}>{user?.email || 'guest@example.com'}</Text>
@@ -160,7 +160,20 @@ export default function ProfileScreen({ navigation }: any) {
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('EditProfile', { user })}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="create-outline" size={24} color="#3b82f6" />
+              </View>
+              <Text style={styles.menuText}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </TouchableOpacity>
+
+          {/* <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: '#f3f4f6' }]}>
                 <Ionicons name="settings-outline" size={24} color="#6b7280" />
@@ -168,11 +181,11 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.menuText}>Settings</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Second Menu Section */}
-        <View style={styles.menuSection}>
+        {/* <View style={styles.menuSection}>
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <Text style={styles.menuText}>Help & Feedback</Text>
@@ -186,7 +199,7 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { orderAPI } from '../lib/api';
-import { CartItem } from '../types';
+import { orderAPI, userAPI } from '../lib/api';
+import { CartItem, User } from '../types';
 
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as { cartItems: CartItem[]; total: number };
@@ -31,6 +31,32 @@ export default function CheckoutScreen({ route, navigation }: any) {
   
   const [paymentMethod, setPaymentMethod] = useState<'paypal' | 'card' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
+
+  // Load user profile on mount
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await userAPI.getProfile();
+      setUserProfile(profile);
+      
+      // Auto-fill form with saved information
+      if (profile.first_name) setFirstName(profile.first_name);
+      if (profile.last_name) setLastName(profile.last_name);
+      if (profile.email) setEmail(profile.email);
+      if (profile.phone_number) setPhone(profile.phone_number);
+      if (profile.billing_address) setStreetAddress(profile.billing_address);
+      if (profile.billing_city) setCity(profile.billing_city);
+      if (profile.billing_zip_code) setPostalCode(profile.billing_zip_code);
+      if (profile.billing_country) setCountry(profile.billing_country);
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
+      // Continue without auto-fill
+    }
+  };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const deliveryFee = 5.0;
@@ -143,6 +169,25 @@ export default function CheckoutScreen({ route, navigation }: any) {
         tax_rate: 0,
         tax_amount: 0,
       });
+
+      // Save user address if not already saved
+      if (userProfile && !userProfile.billing_address) {
+        try {
+          await userAPI.updateProfile({
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            phone_number: phone.trim(),
+            billing_address: streetAddress.trim(),
+            billing_zip_code: postalCode.trim(),
+            billing_city: city.trim(),
+            billing_country: country.trim(),
+          });
+          console.log('User address saved for future orders');
+        } catch (saveError) {
+          console.error('Failed to save user address:', saveError);
+          // Don't block order completion if address save fails
+        }
+      }
 
       // Clear local cart cache (server cart is cleared by backend after order creation)
       await AsyncStorage.setItem('cart', JSON.stringify([]));
