@@ -18,3 +18,9 @@ web-build/
 
 # Test coverage artifacts
 coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
