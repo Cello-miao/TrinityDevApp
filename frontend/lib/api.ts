@@ -62,7 +62,7 @@ const transformUser = (dbUser: any): User => {
     billing_zip_code: dbUser.billing_zip_code || '',
     billing_city: dbUser.billing_city || '',
     billing_country: dbUser.billing_country || '',
-    role: dbUser.role === 'admin' ? 'admin' : 'customer',
+    role: dbUser.role === 'admin' ? 'admin' : 'user',
   };
 };
 
@@ -160,7 +160,7 @@ export const authAPI = {
           id: 'temp',
           name: email.split('@')[0],
           email,
-          role: 'customer',
+          role: 'user',
         };
       }
 

@@ -118,10 +118,6 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.statValue}>{favoritesCount}</Text>
               <Text style={styles.statLabel}>Favorites</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Coupons</Text>
-            </View>
           </View>
         </View>
 
