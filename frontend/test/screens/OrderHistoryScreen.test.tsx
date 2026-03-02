@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
-import OrderHistoryScreen from './OrderHistoryScreen';
-import { orderAPI } from '../lib/api';
+import OrderHistoryScreen from '../../screens/OrderHistoryScreen';
+import { orderAPI } from '../../lib/api';
 
-jest.mock('../lib/api', () => ({
+jest.mock('../../lib/api', () => ({
   orderAPI: {
     getMyOrders: jest.fn(),
   },

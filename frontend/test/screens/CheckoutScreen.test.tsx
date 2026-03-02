@@ -1,8 +1,8 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import CheckoutScreen from './CheckoutScreen';
-import { orderAPI } from '../lib/api';
+import CheckoutScreen from '../../screens/CheckoutScreen';
+import { orderAPI } from '../../lib/api';
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -39,7 +39,7 @@ jest.mock('react-native', () => {
 
 const { Alert, Linking } = require('react-native');
 
-jest.mock('../lib/api', () => ({
+jest.mock('../../lib/api', () => ({
   orderAPI: {
     createOrder: jest.fn(),
   },

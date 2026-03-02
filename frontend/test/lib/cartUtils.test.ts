@@ -1,5 +1,5 @@
-import { addToCart, getCartItemCount } from './cartUtils';
-import { Product } from '../types';
+import { addToCart, getCartItemCount } from '../../lib/cartUtils';
+import { Product } from '../../types';
 
 const storage: Record<string, string | null> = {};
 

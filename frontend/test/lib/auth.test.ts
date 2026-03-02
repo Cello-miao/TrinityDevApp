@@ -1,13 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login, register, logout, getCurrentUser } from './auth';
-import { authAPI } from './api';
+import { login, register, logout, getCurrentUser } from '../../lib/auth';
+import { authAPI } from '../../lib/api';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   multiRemove: jest.fn(),
 }));
 
-jest.mock('./api', () => ({
+jest.mock('../../lib/api', () => ({
   authAPI: {
     login: jest.fn(),
     register: jest.fn(),

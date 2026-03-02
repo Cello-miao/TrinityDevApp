@@ -1,4 +1,4 @@
-import { mockProducts, mockOrders, mockCustomers } from './mockData';
+import { mockProducts, mockOrders, mockCustomers } from '../../lib/mockData';
 
 describe('mockData integrity', () => {
   test('mock products have required fields', () => {

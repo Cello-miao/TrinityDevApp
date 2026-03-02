@@ -1,4 +1,4 @@
-jest.mock('../config/db', () => ({ query: jest.fn() }));
+jest.mock('../../config/db', () => ({ query: jest.fn() }));
 jest.mock('bcrypt', () => ({
   genSalt: jest.fn(),
   hash: jest.fn(),
@@ -6,10 +6,10 @@ jest.mock('bcrypt', () => ({
 }));
 jest.mock('jsonwebtoken', () => ({ sign: jest.fn() }));
 
-const pool = require('../config/db');
+const pool = require('../../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { register, login } = require('./auth.controller');
+const { register, login } = require('../../controllers/auth.controller');
 
 const createRes = () => {
   const res = {};

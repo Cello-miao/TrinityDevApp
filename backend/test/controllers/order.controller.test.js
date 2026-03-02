@@ -1,10 +1,10 @@
-jest.mock('../config/db', () => ({
+jest.mock('../../config/db', () => ({
   connect: jest.fn(),
   query: jest.fn(),
 }));
 
-const pool = require('../config/db');
-const { createOrder, getMyOrders } = require('./order.controller');
+const pool = require('../../config/db');
+const { createOrder, getMyOrders } = require('../../controllers/order.controller');
 
 const createRes = () => {
   const res = {};

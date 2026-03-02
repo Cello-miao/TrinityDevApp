@@ -1,4 +1,4 @@
-const authorizeRoles = require('./roles');
+const authorizeRoles = require('../../middleware/roles');
 
 const createRes = () => {
   const res = {};

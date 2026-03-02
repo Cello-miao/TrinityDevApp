@@ -53,7 +53,7 @@ describe('frontend api module', () => {
       ],
     });
 
-    const { productAPI } = await import('./api');
+    const { productAPI } = await import('../../lib/api');
     const products = await productAPI.getAllProducts();
 
     expect(products[0]).toEqual(
@@ -84,7 +84,7 @@ describe('frontend api module', () => {
         }),
       });
 
-    const { authAPI } = await import('./api');
+    const { authAPI } = await import('../../lib/api');
     const result = await authAPI.login('john@doe.com', '123456');
 
     expect(setItem).toHaveBeenCalledWith('token', 'jwt-token');
@@ -103,7 +103,7 @@ describe('frontend api module', () => {
       json: async () => ({ message: 'ok but no token' }),
     });
 
-    const { authAPI } = await import('./api');
+    const { authAPI } = await import('../../lib/api');
 
     await expect(authAPI.login('a@a.com', 'p')).rejects.toThrow('Login failed');
   });
@@ -131,7 +131,7 @@ describe('frontend api module', () => {
         }),
       });
 
-    const { authAPI } = await import('./api');
+    const { authAPI } = await import('../../lib/api');
     const result = await authAPI.register('Jane Doe', 'jane@doe.com', '001', 'ppp');
 
     expect(result.token).toBe('after-register-token');
@@ -150,7 +150,7 @@ describe('frontend api module', () => {
       }),
     });
 
-    const { userAPI } = await import('./api');
+    const { userAPI } = await import('../../lib/api');
     const user = await userAPI.getProfile();
 
     expect(user).toEqual(
@@ -165,7 +165,7 @@ describe('frontend api module', () => {
       json: async () => ({ id: 1, quantity: 2 }),
     });
 
-    const { cartAPI } = await import('./api');
+    const { cartAPI } = await import('../../lib/api');
     await cartAPI.addToCart('9', 2);
 
     const secondArg = (global as any).fetch.mock.calls[0][1];
@@ -179,7 +179,7 @@ describe('frontend api module', () => {
       json: async () => ({ message: 'ok' }),
     });
 
-    const { cartAPI } = await import('./api');
+    const { cartAPI } = await import('../../lib/api');
     await cartAPI.removeFromCart('123');
 
     const [url, options] = (global as any).fetch.mock.calls[0];
@@ -194,7 +194,7 @@ describe('frontend api module', () => {
       json: async () => ({ message: 'cleared' }),
     });
 
-    const { cartAPI } = await import('./api');
+    const { cartAPI } = await import('../../lib/api');
     await cartAPI.clearCart();
 
     const [url, options] = (global as any).fetch.mock.calls[0];
@@ -210,7 +210,7 @@ describe('frontend api module', () => {
       json: async () => ({ id: 1, name: 'X', price: 1, quantity: 1 }),
     });
 
-    const { productAPI } = await import('./api');
+    const { productAPI } = await import('../../lib/api');
     await productAPI.getProductById('1');
 
     const secondArg = (global as any).fetch.mock.calls[0][1];
@@ -224,7 +224,7 @@ describe('frontend api module', () => {
       json: async () => ({ message: 'Not found from backend' }),
     });
 
-    const { productAPI } = await import('./api');
+    const { productAPI } = await import('../../lib/api');
 
     await expect(productAPI.getProductById('404')).rejects.toThrow('Not found from backend');
   });
@@ -236,7 +236,7 @@ describe('frontend api module', () => {
       json: async () => ({ order: { id: 1 } }),
     });
 
-    const { orderAPI } = await import('./api');
+    const { orderAPI } = await import('../../lib/api');
     await orderAPI.createOrder({
       items: [{ product_id: 9, quantity: 2 }],
       payment_method: 'paypal',
@@ -257,7 +257,7 @@ describe('frontend api module', () => {
       json: async () => [],
     });
 
-    const { orderAPI } = await import('./api');
+    const { orderAPI } = await import('../../lib/api');
     const orders = await orderAPI.getMyOrders();
 
     const [url, options] = (global as any).fetch.mock.calls[0];
@@ -283,7 +283,7 @@ describe('frontend api module', () => {
       }),
     });
 
-    const { scannerAPI } = await import('./api');
+    const { scannerAPI } = await import('../../lib/api');
     const product = await scannerAPI.lookupByBarcode('12345');
 
     const [url, options] = (global as any).fetch.mock.calls[0];

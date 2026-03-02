@@ -1,12 +1,12 @@
-jest.mock('../config/db', () => ({
+jest.mock('../../config/db', () => ({
   query: jest.fn(),
 }));
 
-const pool = require('../config/db');
+const pool = require('../../config/db');
 const {
   findProductByBarcode,
   scanAndAddToCart,
-} = require('./scanner.controller');
+} = require('../../controllers/scanner.controller');
 
 const createRes = () => {
   const res = {};

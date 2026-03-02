@@ -1,7 +1,7 @@
 jest.mock('jsonwebtoken', () => ({ verify: jest.fn() }));
 
 const jwt = require('jsonwebtoken');
-const verifyToken = require('./auth');
+const verifyToken = require('../../middleware/auth');
 
 const createRes = () => {
   const res = {};

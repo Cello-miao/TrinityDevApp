@@ -1,6 +1,6 @@
-jest.mock('../config/db', () => ({ query: jest.fn() }));
+jest.mock('../../config/db', () => ({ query: jest.fn() }));
 
-const pool = require('../config/db');
+const pool = require('../../config/db');
 const {
   getAllUsers,
   getUserById,
@@ -8,7 +8,7 @@ const {
   deleteUser,
   getProfile,
   updateProfile,
-} = require('./user.controller');
+} = require('../../controllers/user.controller');
 
 const createRes = () => {
   const res = {};
