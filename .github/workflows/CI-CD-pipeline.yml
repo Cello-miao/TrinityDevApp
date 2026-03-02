@@ -19,7 +19,7 @@ jobs:
 
       - name: Run backend tests in Docker
         run: |
-          docker compose --profile test run --rm --entrypoint sh tests -c "npm ci --no-audit --no-fund && npm run test:backend"
+          docker compose --profile test run --rm --entrypoint sh tests -c "npm ci --no-audit --no-fund && npm run test:backend:coverage"
 
   test-frontend:
     name: Test - Frontend
@@ -33,7 +33,7 @@ jobs:
 
       - name: Run frontend tests in Docker
         run: |
-          docker compose --profile test run --rm --entrypoint sh tests -c "npm ci --no-audit --no-fund && npm run test:frontend"
+          docker compose --profile test run --rm --entrypoint sh tests -c "npm ci --no-audit --no-fund && npm run test:frontend:coverage"
 
   build-and-push-backend-image:
     name: Build & Push Backend Image

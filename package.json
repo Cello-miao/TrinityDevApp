@@ -16,6 +16,8 @@
     "test": "jest --runInBand",
     "test:frontend": "jest --selectProjects frontend --runInBand",
     "test:backend": "npm --prefix backend ci --no-audit --no-fund && jest --selectProjects backend --runInBand",
+    "test:frontend:coverage": "jest --selectProjects frontend --coverage --runInBand",
+    "test:backend:coverage": "npm --prefix backend ci --no-audit --no-fund && jest --selectProjects backend --coverage --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand"
   },
@@ -48,6 +50,14 @@
     "react-test-renderer": "^19.1.0",
     "ts-jest": "^29.4.5",
     "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "@jest/reporters": {
+      "glob": "^13.0.0"
+    },
+    "test-exclude": {
+      "glob": "^7.2.3"
+    }
   },
   "private": true
 }
