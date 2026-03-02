@@ -1,21 +1,13 @@
 name: Mirror to Epitech Organization
 
 on:
-  # 1. Manual Trigger: Can be triggered manually from GitHub Actions tab
-  workflow_dispatch:
-  
-  # 2. Auto Sync on Push: Triggers when code is pushed to dev or prod
-  push:
-    branches:
-      - dev
-  
-  # 3. Periodic Synchronization: Runs every 2 days to ensure total alignment
+  # 1. Periodic Synchronization: Runs every 2 days to ensure total alignment
   schedule:
     - cron: '0 0 */2 * *'
     
-  # 4. Pipeline-Driven Synchronization: Triggered when other workflows finish
+  # 2. Pipeline-Driven Synchronization: Triggered when CI/CD pipeline finishes successfully
   workflow_run:
-    workflows: ["*"]
+    workflows: ["CI/CD-pipeline"]
     types: [completed]
     branches:
       - dev
@@ -28,10 +20,8 @@ jobs:
     name: Mirror All Branches
     runs-on: ubuntu-latest
     
-    # Logic: Run on manual trigger, push, schedule, or after successful workflow runs
+    # Logic: Run on schedule, or after successful CI/CD pipeline workflow runs
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_run' && 
        github.event.workflow_run.conclusion == 'success' && 
