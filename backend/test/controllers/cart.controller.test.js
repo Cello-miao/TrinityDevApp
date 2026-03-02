@@ -16,7 +16,7 @@ const createRes = () => {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 });
 
 describe('cart.controller', () => {
@@ -33,6 +33,7 @@ describe('cart.controller', () => {
 
   test('addToCart updates existing item', async () => {
     pool.query
+      .mockResolvedValueOnce({ rows: [{ id: 10, name: 'P' }] })
       .mockResolvedValueOnce({ rows: [{ id: 7, quantity: 1 }] })
       .mockResolvedValueOnce({ rows: [{ id: 7, quantity: 3 }] });
 
@@ -46,6 +47,7 @@ describe('cart.controller', () => {
 
   test('addToCart inserts new item', async () => {
     pool.query
+      .mockResolvedValueOnce({ rows: [{ id: 10, name: 'P' }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: 9, product_id: 10, quantity: 2 }] });
 
@@ -58,7 +60,7 @@ describe('cart.controller', () => {
   });
 
   test('removeFromCart returns success', async () => {
-    pool.query.mockResolvedValueOnce({});
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 5, user_id: 1 }] });
     const req = { user: { id: 1 }, params: { id: '5' } };
     const res = createRes();
 
@@ -66,7 +68,7 @@ describe('cart.controller', () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(pool.query).toHaveBeenCalledWith(
-      'DELETE FROM cart WHERE id = $1 AND user_id = $2',
+      'DELETE FROM cart WHERE id = $1 AND user_id = $2 RETURNING *',
       ['5', 1],
     );
   });
