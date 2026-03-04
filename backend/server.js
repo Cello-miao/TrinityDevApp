@@ -11,14 +11,17 @@ const cartRoutes = require("./routes/cart.routes");
 const userRoutes = require("./routes/user.routes");
 const scannerRoutes = require("./routes/scanner.routes");
 const orderRoutes = require("./routes/order.routes");
+const openfoodfactsRoutes = require("./routes/openfoodfacts.routes");
 
 // Configure CORS to allow all origins
-app.use(cors({
-  origin: '*',
-  credentials: false,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: "*",
+    credentials: false,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 app.use(express.json());
 
@@ -34,15 +37,16 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/openfoodfacts", openfoodfactsRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {
-  console.log('Test route hit');
+  console.log("Test route hit");
   res.json({ message: "API is working!" });
 });
 
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
+const HOST = "0.0.0.0"; // Listen on all network interfaces
 
 pool.query("SELECT NOW()", (err, res) => {
   if (err) {
