@@ -7,6 +7,10 @@ const CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 
 const getAccessToken = async () => {
+  console.log("Getting PayPal access token");
+  console.log("Client ID:", CLIENT_ID ? "exists" : "MISSING");
+  console.log("Client Secret:", CLIENT_SECRET ? "exists" : "MISSING");
+
   const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString(
     "base64",
   );
@@ -18,7 +22,9 @@ const getAccessToken = async () => {
     },
     body: "grant_type=client_credentials",
   });
+
   const data = await response.json();
+  console.log("PayPal token response:", data);
   return data.access_token;
 };
 
