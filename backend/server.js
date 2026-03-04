@@ -12,6 +12,7 @@ const userRoutes = require("./routes/user.routes");
 const scannerRoutes = require("./routes/scanner.routes");
 const orderRoutes = require("./routes/order.routes");
 const openfoodfactsRoutes = require("./routes/openfoodfacts.routes");
+const paypalRoutes = require("./routes/paypal.routes");
 
 // Configure CORS to allow all origins
 app.use(
@@ -38,6 +39,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/openfoodfacts", openfoodfactsRoutes);
+app.use("/api/paypal", paypalRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {
