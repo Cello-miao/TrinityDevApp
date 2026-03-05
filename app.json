@@ -3,6 +3,7 @@
     "name": "Trinity Shop",
     "slug": "trinity-mobile",
     "version": "1.0.0",
+    "scheme": "freshcart",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,9 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#475569"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trinity.mobile"
@@ -25,9 +24,7 @@
         "backgroundColor": "#475569"
       },
       "package": "com.trinity.mobile",
-      "permissions": [
-        "CAMERA"
-      ]
+      "permissions": ["CAMERA"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,7 +44,8 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ]
   }
 }
