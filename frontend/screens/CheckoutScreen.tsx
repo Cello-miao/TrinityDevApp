@@ -9,13 +9,23 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
-  Linking,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { orderAPI, userAPI } from "../lib/api";
+import { orderAPI, userAPI, API_BASE_URL } from "../lib/api";
 import { CartItem, User } from "../types";
-import { API_BASE_URL } from "../lib/api";
+
+let PayPalScriptProvider: any = null;
+let PayPalButtons: any = null;
+if (Platform.OS === "web") {
+  const paypalModule = require("@paypal/react-paypal-js");
+  PayPalScriptProvider = paypalModule.PayPalScriptProvider;
+  PayPalButtons = paypalModule.PayPalButtons;
+}
+
+const PAYPAL_CLIENT_ID =
+  "AciX0ZVUI754jWR2tMxO0Jjwv-bv1wvoIeAzOf_avDsiklbReunu7U3YF80iehGZuhALz5aPE5Gnoiq3";
 
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as {
@@ -23,7 +33,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
     total: number;
   };
 
-  // Billing Information (required fields)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,24 +41,32 @@ export default function CheckoutScreen({ route, navigation }: any) {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("France");
-
   const [paymentMethod, setPaymentMethod] = useState<"paypal" | "card" | null>(
     null,
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [formValid, setFormValid] = useState(false);
 
-  // Load user profile on mount
   useEffect(() => {
     loadUserProfile();
   }, []);
+
+  useEffect(() => {
+    setFormValid(
+      firstName.trim() !== "" &&
+        lastName.trim() !== "" &&
+        email.trim().includes("@") &&
+        streetAddress.trim() !== "" &&
+        postalCode.trim() !== "" &&
+        city.trim() !== "",
+    );
+  }, [firstName, lastName, email, streetAddress, postalCode, city]);
 
   const loadUserProfile = async () => {
     try {
       const profile = await userAPI.getProfile();
       setUserProfile(profile);
-
-      // Auto-fill form with saved information
       if (profile.first_name) setFirstName(profile.first_name);
       if (profile.last_name) setLastName(profile.last_name);
       if (profile.email) setEmail(profile.email);
@@ -60,7 +77,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
       if (profile.billing_country) setCountry(profile.billing_country);
     } catch (error) {
       console.error("Failed to load user profile:", error);
-      // Continue without auto-fill
     }
   };
 
@@ -103,10 +119,64 @@ export default function CheckoutScreen({ route, navigation }: any) {
     return true;
   };
 
-  const processPayPalPayment = async () => {
+  const completeOrder = async (method: string) => {
+    try {
+      const orderResponse = await orderAPI.createOrder({
+        items: cartItems.map((item) => ({
+          product_id: Number(item.product.id),
+          quantity: item.quantity,
+        })),
+        payment_method: method.toLowerCase(),
+        delivery_address: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
+        customer_name: `${firstName} ${lastName}`,
+        customer_email: email,
+        shipping_fee: deliveryFee,
+        tax_rate: 0,
+        tax_amount: 0,
+      });
+
+      if (userProfile && !userProfile.billing_address) {
+        try {
+          await userAPI.updateProfile({
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            phone_number: phone.trim(),
+            billing_address: streetAddress.trim(),
+            billing_zip_code: postalCode.trim(),
+            billing_city: city.trim(),
+            billing_country: country.trim(),
+          });
+        } catch (saveError) {
+          console.error("Failed to save user address:", saveError);
+        }
+      }
+
+      await AsyncStorage.setItem("cart", JSON.stringify([]));
+      setIsProcessing(false);
+
+      const orderLabel =
+        orderResponse?.order?.order_number || orderResponse?.order?.id || "N/A";
+
+      Alert.alert(
+        "Order Successful!",
+        `Your order #${orderLabel} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
+        [
+          {
+            text: "View Orders",
+            onPress: () => navigation.navigate("Main", { screen: "Orders" }),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error("Failed to create order:", error);
+      setIsProcessing(false);
+      Alert.alert("Error", "Failed to place order, please try again");
+    }
+  };
+
+  const processMobilePayPal = async () => {
     try {
       setIsProcessing(true);
-
       const token = await AsyncStorage.getItem("token");
       const baseUrl = API_BASE_URL.replace("/api", "");
 
@@ -127,47 +197,35 @@ export default function CheckoutScreen({ route, navigation }: any) {
         return;
       }
 
-      Alert.alert(
-        "PayPal Payment",
-        "You will be redirected to PayPal to complete your payment",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-            onPress: () => setIsProcessing(false),
-          },
-          {
-            text: "Continue",
-            onPress: async () => {
-              await Linking.openURL(approvalUrl);
-
-              const captureResponse = await fetch(
-                `${baseUrl}/api/paypal/capture-order`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({ orderId }),
-                },
-              );
-
-              const captureData = await captureResponse.json();
-
-              if (captureData.status === "COMPLETED") {
-                await completeOrder("PayPal");
-              } else {
-                Alert.alert(
-                  "Payment Pending",
-                  "Please complete your payment on PayPal",
-                );
-                setIsProcessing(false);
-              }
-            },
-          },
-        ],
+      const { openAuthSessionAsync } = require("expo-web-browser");
+      const result = await openAuthSessionAsync(
+        approvalUrl,
+        "freshcart://payment-success",
       );
+
+      if (result.type === "success") {
+        const captureResponse = await fetch(
+          `${baseUrl}/api/paypal/capture-order`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ orderId }),
+          },
+        );
+        const captureData = await captureResponse.json();
+        if (captureData.status === "COMPLETED") {
+          await completeOrder("PayPal");
+        } else {
+          Alert.alert("Payment Failed", "PayPal payment was not completed");
+          setIsProcessing(false);
+        }
+      } else {
+        Alert.alert("Cancelled", "PayPal payment was cancelled");
+        setIsProcessing(false);
+      }
     } catch (error) {
       console.error("PayPal payment error:", error);
       Alert.alert("Payment Error", "Failed to process PayPal payment");
@@ -175,86 +233,89 @@ export default function CheckoutScreen({ route, navigation }: any) {
     }
   };
 
-  const completeOrder = async (method: string) => {
-    try {
-      const orderResponse = await orderAPI.createOrder({
-        items: cartItems.map((item) => ({
-          product_id: Number(item.product.id),
-          quantity: item.quantity,
-        })),
-        payment_method: method.toLowerCase(),
-        delivery_address: `${streetAddress}, ${city}, ${postalCode}, ${country}`,
-        customer_name: `${firstName} ${lastName}`,
-        customer_email: email,
-        shipping_fee: deliveryFee,
-        tax_rate: 0,
-        tax_amount: 0,
-      });
-
-      // Save user address if not already saved
-      if (userProfile && !userProfile.billing_address) {
-        try {
-          await userAPI.updateProfile({
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            phone_number: phone.trim(),
-            billing_address: streetAddress.trim(),
-            billing_zip_code: postalCode.trim(),
-            billing_city: city.trim(),
-            billing_country: country.trim(),
-          });
-          console.log("User address saved for future orders");
-        } catch (saveError) {
-          console.error("Failed to save user address:", saveError);
-          // Don't block order completion if address save fails
-        }
-      }
-
-      // Clear local cart cache (server cart is cleared by backend after order creation)
-      await AsyncStorage.setItem("cart", JSON.stringify([]));
-
-      setIsProcessing(false);
-
-      const orderLabel =
-        orderResponse?.order?.order_number || orderResponse?.order?.id || "N/A";
-
-      Alert.alert(
-        "Order Successful! 🎉",
-        `Your order #${orderLabel} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
-        [
-          {
-            text: "View Orders",
-            onPress: () => navigation.navigate("Main", { screen: "Orders" }),
-          },
-        ],
-      );
-    } catch (error) {
-      console.error("Failed to create order:", error);
-      setIsProcessing(false);
-      Alert.alert("Error", "Failed to place order, please try again");
-    }
-  };
-
   const handlePlaceOrder = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    if (paymentMethod === "paypal") {
-      await processPayPalPayment();
+    if (!validateForm()) return;
+    if (paymentMethod === "paypal" && Platform.OS !== "web") {
+      await processMobilePayPal();
     } else if (paymentMethod === "card") {
-      // For card payment, you would integrate Stripe or another payment processor
       Alert.alert(
         "Card Payment",
-        "Card payment integration coming soon. Please use PayPal.",
+        "Card payment integration coming soon. Please use PayPal",
         [{ text: "OK" }],
       );
     }
   };
 
+  const WebPayPalButtons = () => {
+    if (!formValid) {
+      return (
+        <View style={styles.paypalDisabled}>
+          <Text style={styles.paypalDisabledText}>
+            Please fill in all required fields above to enable PayPal
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <PayPalScriptProvider
+        options={{ "client-id": PAYPAL_CLIENT_ID, currency: "EUR" }}
+      >
+        <PayPalButtons
+          style={{
+            layout: "vertical",
+            color: "gold",
+            shape: "rect",
+            label: "paypal",
+            height: 45,
+          }}
+          fundingSource="paypal"
+          createOrder={async () => {
+            const token = await AsyncStorage.getItem("token");
+            const baseUrl = API_BASE_URL.replace("/api", "");
+            const response = await fetch(`${baseUrl}/api/paypal/create-order`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ amount: orderTotal }),
+            });
+            const { orderId } = await response.json();
+            return orderId;
+          }}
+          onApprove={async (data: any) => {
+            const token = await AsyncStorage.getItem("token");
+            const baseUrl = API_BASE_URL.replace("/api", "");
+            const captureResponse = await fetch(
+              `${baseUrl}/api/paypal/capture-order`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ orderId: data.orderID }),
+              },
+            );
+            const captureData = await captureResponse.json();
+            if (captureData.status === "COMPLETED") {
+              await completeOrder("PayPal");
+            } else {
+              Alert.alert("Payment Failed", "PayPal payment was not completed");
+            }
+          }}
+          onError={(err: any) => {
+            console.error("PayPal error", err);
+            Alert.alert("PayPal Error", "Something went wrong with PayPal");
+          }}
+        />
+      </PayPalScriptProvider>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -270,7 +331,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Billing Information Section */}
+        {/* Billing Information */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="document-text-outline" size={20} color="#1e293b" />
@@ -288,7 +349,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
                 placeholderTextColor="#94a3b8"
               />
             </View>
-
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>Last Name *</Text>
               <TextInput
@@ -323,7 +383,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Phone Number *</Text>
+            <Text style={styles.label}>Phone Number</Text>
             <View style={styles.inputContainer}>
               <Ionicons
                 name="call-outline"
@@ -343,7 +403,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {/* Delivery Address Section */}
+        {/* Delivery Address */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={20} color="#1e293b" />
@@ -375,7 +435,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
                 placeholderTextColor="#94a3b8"
               />
             </View>
-
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>City *</Text>
               <TextInput
@@ -400,7 +459,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {/* Payment Method Section */}
+        {/* Payment Method */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="card-outline" size={20} color="#1e293b" />
@@ -459,7 +518,13 @@ export default function CheckoutScreen({ route, navigation }: any) {
             )}
           </TouchableOpacity>
 
-          {paymentMethod === "paypal" && (
+          {paymentMethod === "paypal" && Platform.OS === "web" && (
+            <View style={styles.paypalButtonsContainer}>
+              <WebPayPalButtons />
+            </View>
+          )}
+
+          {paymentMethod === "paypal" && Platform.OS !== "web" && (
             <View style={styles.paymentInfo}>
               <Ionicons
                 name="information-circle-outline"
@@ -474,7 +539,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
           )}
         </View>
 
-        {/* Order Summary Section */}
+        {/* Order Summary */}
         <View style={styles.section}>
           <Text style={styles.summaryTitle}>Order Summary</Text>
 
@@ -490,19 +555,15 @@ export default function CheckoutScreen({ route, navigation }: any) {
           ))}
 
           <View style={styles.divider} />
-
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
           </View>
-
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Delivery Fee</Text>
             <Text style={styles.summaryValue}>€{deliveryFee.toFixed(2)}</Text>
           </View>
-
           <View style={styles.divider} />
-
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>€{orderTotal.toFixed(2)}</Text>
@@ -512,37 +573,37 @@ export default function CheckoutScreen({ route, navigation }: any) {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Place Order Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.placeOrderButton,
-            isProcessing && styles.placeOrderButtonDisabled,
-          ]}
-          onPress={handlePlaceOrder}
-          disabled={isProcessing}
-        >
-          {isProcessing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.placeOrderText}>
-                {paymentMethod === "paypal" ? "Pay with PayPal" : "Place Order"}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+      {(Platform.OS !== "web" || paymentMethod === "card") && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.placeOrderButton,
+              isProcessing && styles.placeOrderButtonDisabled,
+            ]}
+            onPress={handlePlaceOrder}
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.placeOrderText}>
+                  {paymentMethod === "paypal"
+                    ? "Pay with PayPal"
+                    : "Place Order"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -553,17 +614,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1e293b",
-  },
-  scrollView: {
-    flex: 1,
-  },
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: "#1e293b" },
+  scrollView: { flex: 1 },
   section: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
@@ -584,15 +637,8 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     marginLeft: 8,
   },
-  formGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1e293b",
-    marginBottom: 8,
-  },
+  formGroup: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "500", color: "#1e293b", marginBottom: 8 },
   input: {
     backgroundColor: "#fff",
     borderWidth: 1,
@@ -603,36 +649,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1e293b",
   },
-  inputContainer: {
-    position: "relative",
-  },
-  inputWithIcon: {
-    paddingLeft: 44,
-  },
-  inputIcon: {
-    position: "absolute",
-    left: 16,
-    top: 14,
-    zIndex: 1,
-  },
-  textArea: {
-    minHeight: 60,
-    textAlignVertical: "top",
-  },
-  rowInputs: {
-    flexDirection: "row",
-  },
-  selectContainer: {
-    position: "relative",
-  },
-  selectInput: {
-    paddingRight: 40,
-  },
-  selectIcon: {
-    position: "absolute",
-    right: 16,
-    top: 14,
-  },
+  inputContainer: { position: "relative" },
+  inputWithIcon: { paddingLeft: 44 },
+  inputIcon: { position: "absolute", left: 16, top: 14, zIndex: 1 },
+  textArea: { minHeight: 60, textAlignVertical: "top" },
+  rowInputs: { flexDirection: "row" },
+  selectContainer: { position: "relative" },
+  selectInput: { paddingRight: 40 },
+  selectIcon: { position: "absolute", right: 16, top: 14 },
   summaryTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -645,52 +669,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  summaryItemText: {
-    fontSize: 14,
-    color: "#475569",
-    flex: 1,
-  },
-  summaryItemPrice: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1e293b",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e2e8f0",
-    marginVertical: 12,
-  },
+  summaryItemText: { fontSize: 14, color: "#475569", flex: 1 },
+  summaryItemPrice: { fontSize: 14, fontWeight: "500", color: "#1e293b" },
+  divider: { height: 1, backgroundColor: "#e2e8f0", marginVertical: 12 },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1e293b",
-  },
+  summaryLabel: { fontSize: 14, color: "#64748b" },
+  summaryValue: { fontSize: 14, fontWeight: "500", color: "#1e293b" },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 4,
   },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  totalValue: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1e293b",
-  },
+  totalLabel: { fontSize: 16, fontWeight: "700", color: "#1e293b" },
+  totalValue: { fontSize: 22, fontWeight: "bold", color: "#1e293b" },
   footer: {
     position: "absolute",
     bottom: 0,
@@ -711,9 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  placeOrderButtonDisabled: {
-    backgroundColor: "#94a3b8",
-  },
+  placeOrderButtonDisabled: { backgroundColor: "#94a3b8" },
   placeOrderText: {
     color: "#fff",
     fontSize: 16,
@@ -730,20 +725,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
   },
-  paymentOptionSelected: {
-    borderColor: "#10b981",
-    backgroundColor: "#f0fdf4",
-  },
-  paymentOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  paymentOptionText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#1e293b",
-  },
+  paymentOptionSelected: { borderColor: "#10b981", backgroundColor: "#f0fdf4" },
+  paymentOptionLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  paymentOptionText: { fontSize: 15, fontWeight: "500", color: "#1e293b" },
   radioButton: {
     width: 24,
     height: 24,
@@ -753,9 +737,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  radioButtonSelected: {
-    borderColor: "#10b981",
-  },
+  radioButtonSelected: { borderColor: "#10b981" },
   radioButtonInner: {
     width: 12,
     height: 12,
@@ -771,10 +753,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 8,
   },
-  paymentInfoText: {
-    flex: 1,
-    fontSize: 13,
-    color: "#1e40af",
-    lineHeight: 18,
+  paymentInfoText: { flex: 1, fontSize: 13, color: "#1e40af", lineHeight: 18 },
+  paypalButtonsContainer: { marginTop: 12 },
+  paypalDisabled: {
+    padding: 16,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 8,
+    marginTop: 8,
   },
+  paypalDisabledText: { fontSize: 13, color: "#64748b", textAlign: "center" },
 });
