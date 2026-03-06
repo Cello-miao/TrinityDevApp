@@ -1,8 +1,6 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import CheckoutScreen from '../../screens/CheckoutScreen';
-import { orderAPI } from '../../lib/api';
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -29,6 +27,7 @@ jest.mock('react-native', () => {
     TouchableOpacity: createComponent('TouchableOpacity'),
     SafeAreaView: createComponent('SafeAreaView'),
     ActivityIndicator: createComponent('ActivityIndicator'),
+    Platform: { OS: 'ios' },
     Alert: { alert: jest.fn() },
     Linking: {
       canOpenURL: jest.fn(),
@@ -40,10 +39,27 @@ jest.mock('react-native', () => {
 const { Alert, Linking } = require('react-native');
 
 jest.mock('../../lib/api', () => ({
+  API_BASE_URL: 'http://localhost:3000/api',
   orderAPI: {
     createOrder: jest.fn(),
   },
+  userAPI: {
+    getProfile: jest.fn(),
+    updateProfile: jest.fn(),
+  },
 }));
+
+jest.mock(
+  'expo-web-browser',
+  () => ({
+    openAuthSessionAsync: jest.fn(),
+  }),
+  { virtual: true },
+);
+
+const { openAuthSessionAsync } = jest.requireMock('expo-web-browser');
+const { orderAPI } = require('../../lib/api');
+const CheckoutScreen = require('../../screens/CheckoutScreen').default;
 
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
@@ -78,10 +94,13 @@ describe('CheckoutScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    (global as any).fetch = jest.fn();
     (orderAPI.createOrder as jest.Mock).mockResolvedValue({
       order: { id: 22, order_number: 'ORD-22' },
     });
+    (openAuthSessionAsync as jest.Mock).mockResolvedValue({ type: 'success' });
     jest.spyOn(AsyncStorage, 'setItem').mockResolvedValue(undefined);
+    jest.spyOn(AsyncStorage, 'getItem').mockResolvedValue('token-123');
     jest.spyOn(Linking, 'canOpenURL').mockResolvedValue(true);
     jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as any);
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -104,6 +123,14 @@ describe('CheckoutScreen', () => {
   test('creates order successfully through PayPal flow', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
 
+    (global as any).fetch
+      .mockResolvedValueOnce({
+        json: async () => ({ orderId: 'paypal-order-1', approvalUrl: 'https://paypal.test/approve' }),
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({ status: 'COMPLETED' }),
+      });
+
     const { getByText, getByPlaceholderText } = render(
       React.createElement(CheckoutScreen, { route, navigation }),
     );
@@ -119,17 +146,6 @@ describe('CheckoutScreen', () => {
     fireEvent.press(getByText('PayPal'));
     fireEvent.press(getByText('Pay with PayPal'));
 
-    const paypalAlertCall = (Alert.alert as jest.Mock).mock.calls.find(
-      (call: any[]) => call[0] === 'PayPal Payment',
-    );
-    await act(async () => {
-      await paypalAlertCall?.[2]?.[1]?.onPress?.();
-    });
-
-    await act(async () => {
-      jest.advanceTimersByTime(3200);
-    });
-
     await waitFor(() => {
       expect(orderAPI.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -142,7 +158,7 @@ describe('CheckoutScreen', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('cart', '[]');
 
     const successAlertCall = (Alert.alert as jest.Mock).mock.calls.find(
-      (call: any[]) => call[0] === 'Order Successful! 🎉',
+      (call: any[]) => call[0] === 'Order Successful!',
     );
     successAlertCall?.[2]?.[0]?.onPress?.();
 
@@ -152,6 +168,14 @@ describe('CheckoutScreen', () => {
 
   test('shows error alert when backend order creation fails', async () => {
     (orderAPI.createOrder as jest.Mock).mockRejectedValueOnce(new Error('create failed'));
+
+    (global as any).fetch
+      .mockResolvedValueOnce({
+        json: async () => ({ orderId: 'paypal-order-2', approvalUrl: 'https://paypal.test/approve' }),
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({ status: 'COMPLETED' }),
+      });
 
     jest.spyOn(Alert, 'alert');
 
@@ -169,17 +193,6 @@ describe('CheckoutScreen', () => {
 
     fireEvent.press(getByText('PayPal'));
     fireEvent.press(getByText('Pay with PayPal'));
-
-    const paypalAlertCall = (Alert.alert as jest.Mock).mock.calls.find(
-      (call: any[]) => call[0] === 'PayPal Payment',
-    );
-    await act(async () => {
-      await paypalAlertCall?.[2]?.[1]?.onPress?.();
-    });
-
-    await act(async () => {
-      jest.advanceTimersByTime(3200);
-    });
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to place order, please try again');
