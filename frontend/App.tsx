@@ -21,6 +21,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import BarcodeScannerScreen from './screens/BarcodeScannerScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
+import AdminStatsScreen from './screens/AdminStatsScreen';
 import AdminOrdersScreen from './screens/AdminOrdersScreen';
 import AdminCustomersScreen from './screens/AdminCustomersScreen';
 import AdminProfileScreen from './screens/AdminProfileScreen';
@@ -101,7 +102,9 @@ function AdminTabs() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'cube';
 
-          if (route.name === 'Products') {
+          if (route.name === 'Dashboard') {
+            iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+          } else if (route.name === 'Products') {
             iconName = focused ? 'cube' : 'cube-outline';
           } else if (route.name === 'AdminOrders') {
             iconName = focused ? 'receipt' : 'receipt-outline';
@@ -122,6 +125,11 @@ function AdminTabs() {
         headerShown: false,
       })}
     >
+      <Tab.Screen 
+        name="Dashboard" 
+        component={AdminStatsScreen}
+        options={{ title: 'Dashboard' }}
+      />
       <Tab.Screen 
         name="Products" 
         component={AdminDashboardScreen}

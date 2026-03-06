@@ -12,10 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { logout } from '../lib/auth';
 import { userAPI } from '../lib/api';
 import { User } from '../types';
-import { useTheme } from '../lib/theme';
+import { useTheme, useThemeMode } from '../lib/theme';
 
 export default function AdminProfileScreen({ navigation }: any) {
   const theme = useTheme();
+  const { themeMode, setThemeMode, isDark } = useThemeMode();
   const styles = createStyles(theme);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,35 @@ export default function AdminProfileScreen({ navigation }: any) {
               </View>
             </>
           )}
+        </View>
+
+        {/* Appearance Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.themeContainer}>
+            <View style={styles.themeLeft}>
+              <View style={[styles.themeIcon, { backgroundColor: isDark ? '#334155' : '#f3f4f6' }]}>
+                <Ionicons name={isDark ? "moon" : "sunny"} size={20} color={isDark ? "#fbbf24" : "#f59e0b"} />
+              </View>
+              <Text style={styles.themeLabel}>Theme</Text>
+            </View>
+            <View style={styles.themeOptions}>
+              <TouchableOpacity 
+                style={[styles.themeOption, themeMode === 'light' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('light')}
+              >
+                <Ionicons name="sunny" size={16} color={themeMode === 'light' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.themeOptionText, themeMode === 'light' && styles.themeOptionTextActive]}>Light</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.themeOption, themeMode === 'dark' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Ionicons name="moon" size={16} color={themeMode === 'dark' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.themeOptionText, themeMode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -131,7 +161,65 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.card,
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  themeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  themeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  themeLabel: {
+    fontSize: 15,
+    color: theme.text,
+    fontWeight: '500',
+  },
+  themeOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: theme.background,
+    gap: 6,
+  },
+  themeOptionActive: {
+    backgroundColor: theme.primary,
+  },
+  themeOptionText: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '500',
+  },
+  themeOptionTextActive: {
+    color: '#fff',
   },
   logoutButton: {
     flexDirection: 'row',
