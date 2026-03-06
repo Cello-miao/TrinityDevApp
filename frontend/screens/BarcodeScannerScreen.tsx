@@ -10,8 +10,11 @@ import {
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { scannerAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export default function BarcodeScannerScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
@@ -217,7 +220,7 @@ export default function BarcodeScannerScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
@@ -309,12 +312,12 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     fontSize: 18,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginTop: 16,
   },
   permissionSubtext: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: theme.textTertiary,
     marginTop: 8,
     textAlign: 'center',
     paddingHorizontal: 40,

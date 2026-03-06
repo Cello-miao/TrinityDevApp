@@ -13,8 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
 import { orderAPI, cartAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export default function OrderHistoryScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
@@ -295,10 +298,10 @@ export default function OrderHistoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -306,9 +309,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   backButton: {
     padding: 4,
@@ -316,24 +319,24 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   emptyText: {
     fontSize: 18,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginTop: 16,
   },
   scrollView: {
     flex: 1,
   },
   statsCard: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 8,
@@ -364,14 +367,14 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   orderCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 8,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -387,7 +390,7 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
   },
   completedBadge: {
     backgroundColor: '#d1fae5',
@@ -398,6 +401,7 @@ const styles = StyleSheet.create({
   completedText: {
     fontSize: 12,
     fontWeight: '600',
+    color: theme.success,
     color: '#059669',
   },
   orderMeta: {
@@ -457,22 +461,22 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 2,
+    color: theme.text,
+    marginBottom: 4,
   },
   itemVendor: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   itemQuantity: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   itemPrice: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   orderActions: {
     flexDirection: 'row',

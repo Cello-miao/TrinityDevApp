@@ -4,9 +4,9 @@
     "slug": "trinity-mobile",
     "version": "1.0.0",
     "scheme": "freshcart",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "main": "index.js",
     "splash": {
       "image": "./assets/splash.png",

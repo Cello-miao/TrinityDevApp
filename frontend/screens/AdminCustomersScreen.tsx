@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { userAPI, orderAPI } from '../lib/api';
 import { User, Order } from '../types';
+import { useTheme } from '../lib/theme';
 
 interface Customer {
   id: string;
@@ -28,6 +29,8 @@ interface CustomerWithOrders extends Customer {
 }
 
 export default function AdminCustomersScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState<CustomerWithOrders[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,10 +227,10 @@ export default function AdminCustomersScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     marginHorizontal: 16,
     marginTop: 24,
     paddingHorizontal: 16,
@@ -246,16 +249,16 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1e293b',
+    color: theme.text,
   },
   customerCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: theme.border,
   },
   customerHeader: {
     flexDirection: 'row',
@@ -266,7 +269,7 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
     flex: 1,
   },
   customerHeaderRight: {
@@ -275,13 +278,13 @@ const styles = StyleSheet.create({
   totalSpent: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 4,
   },
   customerRole: {
     fontSize: 13,
-    color: '#475569',
-    backgroundColor: '#e2e8f0',
+    color: theme.primary,
+    backgroundColor: theme.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -289,12 +292,12 @@ const styles = StyleSheet.create({
   },
   customerEmail: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 6,
   },
   customerPhone: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: theme.textTertiary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -302,7 +305,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: theme.border,
     gap: 16,
   },
   statItem: {
@@ -311,18 +314,18 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   ordersSection: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: theme.border,
   },
   ordersSectionHeader: {
     flexDirection: 'row',
@@ -333,14 +336,14 @@ const styles = StyleSheet.create({
   ordersSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#475569',
+    color: theme.primary,
   },
   orderItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     marginBottom: 6,
   },
@@ -350,12 +353,12 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 2,
   },
   orderDate: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   orderRight: {
     alignItems: 'flex-end',
@@ -363,7 +366,7 @@ const styles = StyleSheet.create({
   orderTotal: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 4,
   },
   orderStatus: {
@@ -379,19 +382,19 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: theme.border,
     alignItems: 'center',
   },
   noOrdersText: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: theme.textTertiary,
     fontStyle: 'italic',
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: theme.border,
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
@@ -405,10 +408,10 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 12,
-    color: '#475569',
+    color: theme.primary,
     fontWeight: '500',
   },
   navTextInactive: {
-    color: '#94a3b8',
+    color: theme.textTertiary,
   },
 });

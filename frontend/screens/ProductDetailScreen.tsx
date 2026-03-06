@@ -6,14 +6,16 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { cartAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export default function ProductDetailScreen({ route, navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const { product } = route.params as { product: Product };
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -55,12 +57,8 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const handleAddToCart = async () => {
     try {
       await cartAPI.addToCart(product.id, quantity);
-      Alert.alert('Success', 'Added to cart', [
-        { text: 'Continue Shopping', onPress: () => navigation.goBack() },
-        { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
-      ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add to cart');
+      console.error('Failed to add to cart:', error);
     }
   };
 
@@ -184,10 +182,10 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   imageContainer: {
     position: 'relative',
@@ -195,7 +193,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 300,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.inputBackground,
   },
   favoriteButton: {
     position: 'absolute',
@@ -219,12 +217,12 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 8,
   },
   category: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 16,
   },
   priceContainer: {
@@ -235,7 +233,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#475569',
+    color: theme.primary,
     marginRight: 12,
   },
   discountBadge: {
@@ -261,18 +259,18 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     marginVertical: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: '#475569',
+    color: theme.textSecondary,
     lineHeight: 24,
   },
   barcodeContainer: {
@@ -281,7 +279,7 @@ const styles = StyleSheet.create({
   },
   barcode: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginLeft: 8,
   },
   infoRow: {
@@ -289,29 +287,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 14,
-    color: '#1e293b',
+    color: theme.text,
   },
   bottomBar: {
     flexDirection: 'row',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    borderTopColor: theme.border,
+    backgroundColor: theme.surface,
     gap: 12,
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.searchBackground,
     borderRadius: 12,
     padding: 4,
   },
@@ -320,18 +318,18 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
   },
   quantity: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     paddingHorizontal: 16,
   },
   addButton: {
     flex: 1,
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -339,10 +337,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButtonDisabled: {
-    backgroundColor: '#cbd5e1',
+    backgroundColor: theme.textSecondary,
   },
   addButtonText: {
-    color: '#fff',
+    color: theme.buttonText,
     fontSize: 16,
     fontWeight: 'bold',
   },

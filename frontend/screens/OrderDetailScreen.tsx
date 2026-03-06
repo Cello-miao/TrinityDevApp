@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../types';
+import { useTheme } from '../lib/theme';
 
 interface OrderDetailScreenProps {
   navigation: any;
@@ -21,6 +22,8 @@ interface OrderDetailScreenProps {
 }
 
 export default function OrderDetailScreen({ navigation, route }: OrderDetailScreenProps) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const { order } = route.params;
   
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -149,10 +152,10 @@ export default function OrderDetailScreen({ navigation, route }: OrderDetailScre
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -160,9 +163,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   backButton: {
     padding: 4,
@@ -170,19 +173,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   scrollView: {
     flex: 1,
   },
   orderInfoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -193,7 +196,7 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
   },
   statusBadge: {
     backgroundColor: '#d1fae5',
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#059669',
+    color: theme.success,
   },
   infoRow: {
     flexDirection: 'row',
@@ -228,27 +231,27 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   orderItemsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 16,
   },
   orderItem: {
@@ -256,13 +259,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   itemImage: {
     width: 70,
     height: 70,
     borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
   },
   itemInfo: {
     flex: 1,
@@ -272,17 +275,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 4,
   },
   itemCategory: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   itemQuantity: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   itemPriceContainer: {
     alignItems: 'flex-end',
@@ -290,22 +293,22 @@ const styles = StyleSheet.create({
   },
   itemUnitPrice: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   itemTotalPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
   },
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 12,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -315,22 +318,22 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
   },
   totalValue: {
     fontSize: 20,

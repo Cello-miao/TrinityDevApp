@@ -13,8 +13,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { userAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export default function EditProfileScreen({ route, navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const { user: initialUser } = route.params as { user: User };
   
   const [loading, setLoading] = useState(false);
@@ -212,10 +215,10 @@ export default function EditProfileScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -223,9 +226,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: theme.border,
   },
   backButton: {
     padding: 4,
@@ -233,19 +236,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -255,12 +258,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginLeft: 8,
   },
   sectionDescription: {
     fontSize: 13,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 16,
     marginTop: -8,
   },
@@ -270,18 +273,18 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#475569',
+    color: theme.primary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#1e293b',
+    color: theme.text,
   },
   inputContainer: {
     position: 'relative',
@@ -300,27 +303,27 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   disabledInput: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: theme.textTertiary,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   disabledText: {
     fontSize: 15,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   helperText: {
     fontSize: 12,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginTop: 4,
   },
   rowInputs: {
     flexDirection: 'row',
   },
   saveButton: {
-    backgroundColor: '#64748b',
+    backgroundColor: theme.textSecondary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

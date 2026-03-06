@@ -8,17 +8,19 @@ import {
   Image,
   Dimensions,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
+import { useTheme } from '../lib/theme';
 
 const { width } = Dimensions.get('window');
 
 export default function FavoritesScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [favorites, setFavorites] = useState<Product[]>([]);
 
   useFocusEffect(
@@ -43,9 +45,8 @@ export default function FavoritesScreen({ navigation }: any) {
   const handleAddToCart = async (product: Product) => {
     try {
       await addToCart(product, 1);
-      Alert.alert('Success', `${product.name} added to cart!`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart');
+      console.error('Failed to add item to cart:', error);
     }
   };
 
@@ -139,10 +140,10 @@ export default function FavoritesScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -150,9 +151,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   backButton: {
     padding: 4,
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
   },
   emptyContainer: {
     flex: 1,
@@ -171,18 +172,18 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginTop: 8,
     textAlign: 'center',
   },
   shopButton: {
     marginTop: 24,
-    backgroundColor: '#2c3e50',
+    backgroundColor: theme.primaryDark,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   productsGrid: {
     flexDirection: 'row',
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: (width - 44) / 2,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 12,
     overflow: 'hidden',
     marginHorizontal: 4,
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: 160,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
   },
   productInfo: {
     padding: 12,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 8,
     minHeight: 36,
   },
@@ -249,10 +250,10 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
   },
   addToCartButton: {
-    backgroundColor: '#2c3e50',
+    backgroundColor: theme.primaryDark,
     padding: 6,
     borderRadius: 6,
   },

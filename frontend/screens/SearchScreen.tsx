@@ -11,8 +11,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { productAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export default function SearchScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [searchQuery, setSearchQuery] = useState('');
   const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
 
@@ -107,10 +110,10 @@ export default function SearchScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
   },
   header: {
     paddingHorizontal: 16,
@@ -120,19 +123,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
     marginHorizontal: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
   },
   searchIcon: {
     marginRight: 10,
@@ -140,7 +143,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1e293b',
+    color: theme.text,
   },
   scanIconButton: {
     padding: 4,
@@ -155,7 +158,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   categoryLeft: {
     flexDirection: 'row',
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 16,
-    color: '#1e293b',
+    color: theme.text,
     fontWeight: '500',
   },
 });

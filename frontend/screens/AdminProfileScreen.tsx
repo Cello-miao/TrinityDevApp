@@ -12,8 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { logout } from '../lib/auth';
 import { userAPI } from '../lib/api';
 import { User } from '../types';
+import { useTheme } from '../lib/theme';
 
 export default function AdminProfileScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -116,10 +119,10 @@ export default function AdminProfileScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   content: {
     flex: 1,
@@ -134,7 +137,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -142,16 +145,16 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 4,
   },
   email: {
     fontSize: 16,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 12,
   },
   roleBadge: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -162,7 +165,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 24,
@@ -181,11 +184,11 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: theme.border,
     justifyContent: 'space-between',
   },
   navItem: {
@@ -198,11 +201,11 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 12,
-    color: '#475569',
+    color: theme.primary,
     fontWeight: '600',
   },
   navTextInactive: {
-    color: '#94a3b8',
+    color: theme.textTertiary,
     fontWeight: 'normal',
   },
 });

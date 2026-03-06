@@ -9,17 +9,19 @@ import {
   TextInput,
   Dimensions,
   ImageBackground,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { productAPI, cartAPI } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
@@ -95,7 +97,6 @@ export default function HomeScreen({ navigation }: any) {
       setProducts(data);
     } catch (error) {
       console.error('Failed to load products:', error);
-      Alert.alert('Error', 'Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -156,9 +157,8 @@ export default function HomeScreen({ navigation }: any) {
   const handleAddToCart = async (product: Product) => {
     try {
       await cartAPI.addToCart(product.id, 1);
-      Alert.alert('Success', `${product.name} added to cart!`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart');
+      console.error('Failed to add item to cart:', error);
     }
   };
 
@@ -339,13 +339,13 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.headerBackground,
     paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 12,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: '#1e293b',
+    color: theme.text,
     fontWeight: '400',
   },
   quickActionsContainer: {
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 20,
     gap: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   quickActionButton: {
     flex: 1,
@@ -376,10 +376,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -387,14 +387,14 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.textSecondary,
     fontWeight: '600',
     textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.searchBackground,
     marginHorizontal: 16,
     marginTop: 16,
     paddingHorizontal: 16,
@@ -405,13 +405,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1e293b',
+    color: theme.text,
   },
   scanButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2c3e50',
+    backgroundColor: theme.primaryDark,
     marginHorizontal: 16,
     marginTop: 16,
     paddingVertical: 16,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   scanButtonText: {
-    color: '#fff',
+    color: theme.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -442,11 +442,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: theme.text,
   },
   viewAllText: {
     fontSize: 14,
-    color: '#64748b',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   mainPromo: {
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   smallPromo: {
     flex: 1,
-    backgroundColor: '#34495e',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
   },
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: (width - 44) / 2,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.badgeBackground,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 4,
@@ -559,20 +559,20 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: 140,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.inputBackground,
   },
   productInfo: {
     padding: 12,
   },
   productVendor: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: theme.text,
     marginBottom: 8,
   },
   productFooter: {
@@ -583,16 +583,16 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.priceText,
   },
   stockText: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: theme.textTertiary,
     marginTop: 2,
   },
   addToCartButton: {
     flexDirection: 'row',
-    backgroundColor: '#2c3e50',
+    backgroundColor: theme.primaryDark,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addToCartText: {
-    color: '#fff',
+    color: theme.buttonText,
     fontSize: 10,
     fontWeight: '600',
   },

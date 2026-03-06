@@ -12,8 +12,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../lib/auth';
+import { useTheme } from '../lib/theme';
 
 export default function LoginScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -102,10 +105,10 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
   },
   content: {
     flex: 1,
@@ -119,27 +122,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#475569',
+    color: theme.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   form: {
     gap: 16,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#1e293b',
+    color: theme.text,
   },
   loginButton: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -167,11 +170,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerLinkText: {
-    color: '#64748b',
+    color: theme.textSecondary,
     fontSize: 14,
   },
   registerLinkBold: {
-    color: '#475569',
+    color: theme.primary,
     fontWeight: 'bold',
   },
 });

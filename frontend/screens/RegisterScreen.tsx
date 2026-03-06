@@ -12,8 +12,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { register } from '../lib/auth';
+import { useTheme } from '../lib/theme';
 
 export default function RegisterScreen({ navigation }: any) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -128,10 +131,10 @@ export default function RegisterScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.background,
   },
   scrollContent: {
     padding: 24,
@@ -141,23 +144,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#1e293b',
+    color: theme.text,
   },
   registerButton: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   registerButtonDisabled: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: theme.textTertiary,
   },
   registerButtonText: {
     color: '#fff',

@@ -14,8 +14,12 @@ import { User } from '../types';
 import { logout } from '../lib/auth';
 import { userAPI, orderAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme, useThemeMode, ThemeMode } from '../lib/theme';
 
 export default function ProfileScreen({ navigation }: any) {
+  const theme = useTheme();
+  const { themeMode, setThemeMode, isDark } = useThemeMode();
+  const styles = createStyles(theme);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
@@ -168,34 +172,37 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>
-
-          {/* <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: '#f3f4f6' }]}>
-                <Ionicons name="settings-outline" size={24} color="#6b7280" />
-              </View>
-              <Text style={styles.menuText}>Settings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity> */}
         </View>
 
-        {/* Second Menu Section */}
-        {/* <View style={styles.menuSection}>
-          <TouchableOpacity style={styles.menuItem}>
+        {/* Appearance Section */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          
+          <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
-              <Text style={styles.menuText}>Help & Feedback</Text>
+              <View style={[styles.menuIcon, { backgroundColor: isDark ? '#334155' : '#f3f4f6' }]}>
+                <Ionicons name={isDark ? "moon" : "sunny"} size={24} color={isDark ? "#fbbf24" : "#f59e0b"} />
+              </View>
+              <Text style={styles.menuText}>Theme</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <Text style={styles.menuText}>About Us</Text>
+            <View style={styles.themeOptions}>
+              <TouchableOpacity 
+                style={[styles.themeOption, themeMode === 'light' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('light')}
+              >
+                <Ionicons name="sunny" size={18} color={themeMode === 'light' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.themeOptionText, themeMode === 'light' && styles.themeOptionTextActive]}>Light</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.themeOption, themeMode === 'dark' && styles.themeOptionActive]}
+                onPress={() => setThemeMode('dark')}
+              >
+                <Ionicons name="moon" size={18} color={themeMode === 'dark' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.themeOptionText, themeMode === 'dark' && styles.themeOptionTextActive]}>Dark</Text>
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-        </View> */}
+          </View>
+        </View>
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -212,24 +219,24 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: theme.text,
   },
   userCard: {
-    backgroundColor: '#475569',
+    backgroundColor: theme.primary,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
@@ -288,11 +295,19 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
   },
   menuSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   menuItem: {
     flexDirection: 'row',
@@ -301,7 +316,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: theme.border,
   },
   menuLeft: {
     flexDirection: 'row',
@@ -317,7 +332,7 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    color: '#1e293b',
+    color: theme.text,
     fontWeight: '500',
   },
   menuRight: {
@@ -326,7 +341,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   badge: {
-    backgroundColor: '#ef4444',
+    backgroundColor: theme.badgeBackground,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -338,28 +353,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  themeOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeOption: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: theme.searchBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: 4,
+  },
+  themeOptionActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.accent,
+  },
+  themeOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  themeOptionTextActive: {
+    color: '#fff',
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.border,
     gap: 8,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748b',
+    color: theme.textSecondary,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 13,
-    color: '#94a3b8',
+    color: theme.textTertiary,
     marginTop: 24,
   },
 });

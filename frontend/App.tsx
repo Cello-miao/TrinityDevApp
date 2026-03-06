@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { ThemeProvider, useTheme, useThemeMode } from './lib/theme';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
@@ -29,6 +30,9 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const theme = useTheme();
+  const { isDark } = useThemeMode();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -49,8 +53,12 @@ function MainTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#475569',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textTertiary,
+        tabBarStyle: {
+          backgroundColor: theme.surface,
+          borderTopColor: theme.border,
+        },
         headerShown: false,
       })}
     >
@@ -83,10 +91,11 @@ function MainTabs() {
   );
 }
 
-export default function App() {
+function AppContent() {
+  const { isDark } = useThemeMode();
   return (
     <>
-      <StatusBar style="auto" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <NavigationContainer>
         <Stack.Navigator 
           initialRouteName="Login"
@@ -173,5 +182,13 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

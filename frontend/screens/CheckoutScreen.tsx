@@ -14,8 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { orderAPI, userAPI, API_BASE_URL } from "../lib/api";
-import { CartItem, User } from "../types";
-
+import { CartItem, User } from "../types";import { useTheme } from '../lib/theme';
 let PayPalScriptProvider: any = null;
 let PayPalButtons: any = null;
 if (Platform.OS === "web") {
@@ -33,6 +32,8 @@ export default function CheckoutScreen({ route, navigation }: any) {
     total: number;
   };
 
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -602,29 +603,29 @@ export default function CheckoutScreen({ route, navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
+const createStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: theme.border,
   },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#1e293b" },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: theme.text },
   scrollView: { flex: 1 },
   section: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: theme.border,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -634,20 +635,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
+    color: theme.text,
     marginLeft: 8,
   },
   formGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", color: "#1e293b", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "500", color: theme.text, marginBottom: 8 },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: "#1e293b",
+    color: theme.text,
   },
   inputContainer: { position: "relative" },
   inputWithIcon: { paddingLeft: 44 },
@@ -660,7 +661,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1e293b",
+    color: theme.text,
     marginBottom: 16,
   },
   summaryItem: {
@@ -669,38 +670,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  summaryItemText: { fontSize: 14, color: "#475569", flex: 1 },
-  summaryItemPrice: { fontSize: 14, fontWeight: "500", color: "#1e293b" },
-  divider: { height: 1, backgroundColor: "#e2e8f0", marginVertical: 12 },
+  summaryItemText: { fontSize: 14, color: theme.primary, flex: 1 },
+  summaryItemPrice: { fontSize: 14, fontWeight: "500", color: theme.text },
+  divider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  summaryLabel: { fontSize: 14, color: "#64748b" },
-  summaryValue: { fontSize: 14, fontWeight: "500", color: "#1e293b" },
+  summaryLabel: { fontSize: 14, color: theme.textSecondary },
+  summaryValue: { fontSize: 14, fontWeight: "500", color: theme.text },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 4,
   },
-  totalLabel: { fontSize: 16, fontWeight: "700", color: "#1e293b" },
-  totalValue: { fontSize: 22, fontWeight: "bold", color: "#1e293b" },
+  totalLabel: { fontSize: 16, fontWeight: "700", color: theme.text },
+  totalValue: { fontSize: 22, fontWeight: "bold", color: theme.text },
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: theme.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   placeOrderButton: {
-    backgroundColor: "#475569",
+    backgroundColor: theme.primary,
     paddingVertical: 16,
     borderRadius: 12,
     flexDirection: "row",
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  placeOrderButtonDisabled: { backgroundColor: "#94a3b8" },
+  placeOrderButtonDisabled: { backgroundColor: theme.textTertiary },
   placeOrderText: {
     color: "#fff",
     fontSize: 16,
@@ -721,28 +722,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderWidth: 2,
-    borderColor: "#e2e8f0",
+    borderColor: theme.border,
     borderRadius: 12,
     marginBottom: 12,
   },
-  paymentOptionSelected: { borderColor: "#10b981", backgroundColor: "#f0fdf4" },
+  paymentOptionSelected: { borderColor: theme.success, backgroundColor: '#f0fdf4' },
   paymentOptionLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  paymentOptionText: { fontSize: 15, fontWeight: "500", color: "#1e293b" },
+  paymentOptionText: { fontSize: 15, fontWeight: "500", color: theme.text },
   radioButton: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#cbd5e1",
+    borderColor: theme.textTertiary,
     alignItems: "center",
     justifyContent: "center",
   },
-  radioButtonSelected: { borderColor: "#10b981" },
+  radioButtonSelected: { borderColor: theme.success },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#10b981",
+    backgroundColor: theme.success,
   },
   paymentInfo: {
     flexDirection: "row",
@@ -757,9 +758,9 @@ const styles = StyleSheet.create({
   paypalButtonsContainer: { marginTop: 12 },
   paypalDisabled: {
     padding: 16,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: theme.border,
     borderRadius: 8,
     marginTop: 8,
   },
-  paypalDisabledText: { fontSize: 13, color: "#64748b", textAlign: "center" },
+  paypalDisabledText: { fontSize: 13, color: theme.textSecondary, textAlign: "center" },
 });
