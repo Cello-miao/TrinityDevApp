@@ -160,9 +160,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
-          </TouchableOpacity>
+          <View style={{ width: 24 }} />
           <Text style={styles.headerTitle}>Order History</Text>
           <View style={{ width: 24 }} />
         </View>
@@ -178,9 +176,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1e293b" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>Order History</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -402,7 +398,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.success,
-    color: '#059669',
   },
   orderMeta: {
     flexDirection: 'row',
