@@ -388,43 +388,6 @@ export default function AdminDashboardScreen({ navigation }: any) {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <View style={styles.navIconContainer}>
-            <Ionicons name="cube" size={24} color="#475569" />
-          </View>
-          <Text style={styles.navText}>Products</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminOrders')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="receipt-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminCustomers')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="people-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Customers</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminProfile')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="person-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Add Product Modal */}
       <Modal
         visible={isAddModalVisible}
@@ -825,30 +788,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: '#ef4444',
     fontWeight: '500',
   },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: theme.card,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  navIconContainer: {
-    position: 'relative',
-    marginBottom: 4,
-  },
-  navText: {
-    fontSize: 12,
-    color: theme.primary,
-    fontWeight: '500',
-  },
-  navTextInactive: {
-    color: theme.textTertiary,
-  },
   // Modal Styles
   modalOverlay: {
     flex: 1,
@@ -1004,48 +943,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     padding: 16,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  importSearchInput: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  importSearchButton: {
-    backgroundColor: '#475569',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  importResultsList: {
-    flex: 1,
-    padding: 16,
-  },
-  importResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  importResultImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    marginRight: 12,
-  },
-  importResultInfo: {
-    flex: 1,
+    borderBottomColor: theme.border,
   },
   importSearchInput: {
     flex: 1,

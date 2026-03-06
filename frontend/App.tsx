@@ -91,6 +91,61 @@ function MainTabs() {
   );
 }
 
+function AdminTabs() {
+  const theme = useTheme();
+  const { isDark } = useThemeMode();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'cube';
+
+          if (route.name === 'Products') {
+            iconName = focused ? 'cube' : 'cube-outline';
+          } else if (route.name === 'AdminOrders') {
+            iconName = focused ? 'receipt' : 'receipt-outline';
+          } else if (route.name === 'AdminCustomers') {
+            iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'AdminProfile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textTertiary,
+        tabBarStyle: {
+          backgroundColor: theme.surface,
+          borderTopColor: theme.border,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen 
+        name="Products" 
+        component={AdminDashboardScreen}
+        options={{ title: 'Products' }}
+      />
+      <Tab.Screen 
+        name="AdminOrders" 
+        component={AdminOrdersScreen}
+        options={{ title: 'Orders' }}
+      />
+      <Tab.Screen 
+        name="AdminCustomers" 
+        component={AdminCustomersScreen}
+        options={{ title: 'Customers' }}
+      />
+      <Tab.Screen 
+        name="AdminProfile" 
+        component={AdminProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
 function AppContent() {
   const { isDark } = useThemeMode();
   return (
@@ -126,22 +181,7 @@ function AppContent() {
           />
           <Stack.Screen 
             name="AdminDashboard" 
-            component={AdminDashboardScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="AdminOrders" 
-            component={AdminOrdersScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="AdminCustomers" 
-            component={AdminCustomersScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="AdminProfile" 
-            component={AdminProfileScreen}
+            component={AdminTabs}
             options={{ headerShown: false }}
           />
           <Stack.Screen 

@@ -136,43 +136,6 @@ export default function AdminOrdersScreen({ navigation }: any) {
 
         <View style={{ height: 20 }} />
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminDashboard')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="cube-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Products</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <View style={styles.navIconContainer}>
-            <Ionicons name="receipt" size={24} color="#475569" />
-          </View>
-          <Text style={styles.navText}>Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminCustomers')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="people-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Customers</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('AdminProfile')}
-        >
-          <View style={styles.navIconContainer}>
-            <Ionicons name="person-outline" size={24} color="#94a3b8" />
-          </View>
-          <Text style={[styles.navText, styles.navTextInactive]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -265,29 +228,5 @@ const createStyles = (theme: any) => StyleSheet.create({
   customerEmail: {
     fontSize: 13,
     color: theme.textSecondary,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: theme.card,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  navIconContainer: {
-    position: 'relative',
-    marginBottom: 4,
-  },
-  navText: {
-    fontSize: 12,
-    color: theme.primary,
-    fontWeight: '500',
-  },
-  navTextInactive: {
-    color: theme.textTertiary,
   },
 });
