@@ -27,7 +27,8 @@ if (Platform?.OS === "web") {
   } catch (e) {}
 }
 
-const PAYPAL_CLIENT_ID = process.env.EXPO_PUBLIC_PAYPAL_CLIENT_ID || "";
+const PAYPAL_CLIENT_ID =
+  "AciX0ZVUI754jWR2tMxO0Jjwv-bv1wvoIeAzOf_avDsiklbReunu7U3YF80iehGZuhALz5aPE5Gnoiq3";
 
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as {
@@ -216,15 +217,20 @@ export default function CheckoutScreen({ route, navigation }: any) {
       }
 
       const { openAuthSessionAsync } = require("expo-web-browser");
-      const ExpoLinking = require("expo-linking");
+      let ExpoLinking: any = null;
+      try {
+        ExpoLinking = require("expo-linking");
+      } catch (e) {
+        ExpoLinking = null;
+      }
 
       let handled = false;
 
-      const subscription = ExpoLinking.addEventListener(
+      const subscription = ExpoLinking?.addEventListener?.(
         "url",
         async ({ url }: { url: string }) => {
           if (handled) return;
-          subscription.remove();
+          subscription?.remove?.();
           handled = true;
           if (url.includes("payment-success")) {
             const captureData = await capturePayPalOrder(orderId);
@@ -247,7 +253,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
       );
 
       if (!handled) {
-        subscription.remove();
+        subscription?.remove?.();
         if (result.type === "success") {
           handled = true;
           const captureData = await capturePayPalOrder(orderId);
@@ -283,16 +289,6 @@ export default function CheckoutScreen({ route, navigation }: any) {
   };
 
   const WebPayPalButtons = () => {
-    if (!PAYPAL_CLIENT_ID) {
-      return (
-        <View style={styles.paypalDisabled}>
-          <Text style={styles.paypalDisabledText}>
-            PayPal is not configured. Set EXPO_PUBLIC_PAYPAL_CLIENT_ID.
-          </Text>
-        </View>
-      );
-    }
-
     if (!formValid) {
       return (
         <View style={styles.paypalDisabled}>
