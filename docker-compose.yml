@@ -4,16 +4,16 @@ services:
     container_name: trinity_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: trinityshop
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d trinityshop"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,13 +28,18 @@ services:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: trinityshop
-      DB_PORT: 5432
-      JWT_SECRET: 979446783b07b289995acb84d961bc536916e7881b1cd963b5236d84a19febc3a02ee1264f956ab96537233cb5971cf43c679c0025ab5d126c350d611cdb0266
-      PORT: 3000
+      DB_HOST: ${DB_HOST:-db}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT:-5432}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: ${PORT:-3000}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-freshcart://payment-success}
+      PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-freshcart://payment-cancel}
     ports:
       - "3000:3000"
 

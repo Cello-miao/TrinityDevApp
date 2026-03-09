@@ -71,6 +71,11 @@ describe('paypal routes with mocked PayPal responses', () => {
       'https://api-m.sandbox.paypal.com/v2/checkout/orders',
       expect.objectContaining({
         intent: 'CAPTURE',
+        application_context: {
+          return_url: 'freshcart://payment-success',
+          cancel_url: 'freshcart://payment-cancel',
+          user_action: 'PAY_NOW',
+        },
         purchase_units: [
           expect.objectContaining({
             amount: {

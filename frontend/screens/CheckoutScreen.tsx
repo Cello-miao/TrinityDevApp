@@ -27,8 +27,7 @@ if (Platform?.OS === "web") {
   } catch (e) {}
 }
 
-const PAYPAL_CLIENT_ID =
-  "AciX0ZVUI754jWR2tMxO0Jjwv-bv1wvoIeAzOf_avDsiklbReunu7U3YF80iehGZuhALz5aPE5Gnoiq3";
+const PAYPAL_CLIENT_ID = process.env.EXPO_PUBLIC_PAYPAL_CLIENT_ID || "";
 
 export default function CheckoutScreen({ route, navigation }: any) {
   const { cartItems, total } = route.params as {
@@ -284,6 +283,16 @@ export default function CheckoutScreen({ route, navigation }: any) {
   };
 
   const WebPayPalButtons = () => {
+    if (!PAYPAL_CLIENT_ID) {
+      return (
+        <View style={styles.paypalDisabled}>
+          <Text style={styles.paypalDisabledText}>
+            PayPal is not configured. Set EXPO_PUBLIC_PAYPAL_CLIENT_ID.
+          </Text>
+        </View>
+      );
+    }
+
     if (!formValid) {
       return (
         <View style={styles.paypalDisabled}>

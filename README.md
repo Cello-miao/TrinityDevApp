@@ -20,6 +20,27 @@ npm install
 npm.cmd install
 ```
 
+### Secret Management (Local vs GitHub)
+
+- Do not put real secrets in `docker-compose.yml`.
+- Local testing: create hidden `./.env` from `./.env.example`.
+- Remote CI/CD: keep the same keys in GitHub Secrets and inject them as environment variables.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Required keys:
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `DB_PORT`
+- `JWT_SECRET`
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_MODE`
+- `EXPO_PUBLIC_PAYPAL_CLIENT_ID`
+
 ### 2) Start backend + database with Docker
 
 ```bash

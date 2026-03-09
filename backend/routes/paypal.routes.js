@@ -4,6 +4,10 @@ const axios = require("axios");
 const verifyToken = require("../middleware/auth");
 
 const PAYPAL_API = "https://api-m.sandbox.paypal.com";
+const PAYPAL_RETURN_URL =
+  process.env.PAYPAL_RETURN_URL || "freshcart://payment-success";
+const PAYPAL_CANCEL_URL =
+  process.env.PAYPAL_CANCEL_URL || "freshcart://payment-cancel";
 
 const getAccessToken = async () => {
   const response = await axios.post(
@@ -41,8 +45,8 @@ router.post("/create-order", verifyToken, async (req, res) => {
           },
         ],
         application_context: {
-          return_url: "freshcart://payment-success",
-          cancel_url: "freshcart://payment-cancel",
+          return_url: PAYPAL_RETURN_URL,
+          cancel_url: PAYPAL_CANCEL_URL,
           user_action: "PAY_NOW",
         },
       },
