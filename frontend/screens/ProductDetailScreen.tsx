@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
 import { cartAPI } from '../lib/api';
@@ -19,10 +20,15 @@ export default function ProductDetailScreen({ route, navigation }: any) {
   const { product } = route.params as { product: Product };
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [cartQuantity, setCartQuantity] = useState(0);
+  const [cartItemId, setCartItemId] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkFavoriteStatus();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      checkFavoriteStatus();
+      loadCartQuantity();
+    }, [product.id])
+  );
 
   const checkFavoriteStatus = async () => {
     try {
@@ -33,6 +39,32 @@ export default function ProductDetailScreen({ route, navigation }: any) {
       }
     } catch (error) {
       console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const loadCartQuantity = async () => {
+    try {
+      const cartData = await cartAPI.getCart();
+      if (Array.isArray(cartData)) {
+        const cartItem = cartData.find((item: any) => 
+          item.product_id?.toString() === product.id.toString()
+        );
+        if (cartItem) {
+          const qty = cartItem.quantity || 0;
+          setCartQuantity(qty);
+          setQuantity(qty); // Set the quantity picker to cart quantity
+          setCartItemId(cartItem.id?.toString() || null);
+        } else {
+          setCartQuantity(0);
+          setQuantity(1); // Reset to 1 if not in cart
+          setCartItemId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cart quantity:', error);
+      setCartQuantity(0);
+      setQuantity(1);
+      setCartItemId(null);
     }
   };
 
@@ -56,7 +88,14 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const handleAddToCart = async () => {
     try {
-      await cartAPI.addToCart(product.id, quantity);
+      if (cartItemId) {
+        // Update existing cart item quantity
+        await cartAPI.updateCartItem(cartItemId, quantity);
+      } else {
+        // Add new item to cart
+        await cartAPI.addToCart(product.id, quantity);
+      }
+      await loadCartQuantity();
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }

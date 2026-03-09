@@ -210,7 +210,7 @@ function AppContent() {
           <Stack.Screen 
             name="Checkout" 
             component={CheckoutScreen}
-            options={{ title: 'Checkout' }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen 
             name="OrderDetail" 

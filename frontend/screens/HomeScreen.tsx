@@ -28,11 +28,17 @@ export default function HomeScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('Guest');
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [cartItems, setCartItems] = useState<Record<string, number>>({});
+  const [cartItemIds, setCartItemIds] = useState<Record<string, string>>({});
 
   useFocusEffect(
     useCallback(() => {
-      loadProducts();
-      loadUserName();
+      const load = async () => {
+        await loadProducts();
+        await loadUserName();
+        await loadCart();
+      };
+      load();
     }, [])
   );
 
@@ -87,6 +93,37 @@ export default function HomeScreen({ navigation }: any) {
       }
     } catch (error) {
       console.error('Failed to load user name:', error);
+    }
+  };
+
+  const loadCart = async () => {
+    try {
+      console.log('Loading cart...');
+      const cartData = await cartAPI.getCart();
+      console.log('Cart data:', cartData);
+      const cartMap: Record<string, number> = {};
+      const cartIds: Record<string, string> = {};
+      
+      // Backend returns array directly, not { items: [] }
+      if (Array.isArray(cartData)) {
+        cartData.forEach((item: any) => {
+          const productId = item.product_id?.toString();
+          const cartItemId = item.id?.toString();
+          if (productId && cartItemId) {
+            cartMap[productId] = (cartMap[productId] || 0) + (item.quantity || 0);
+            cartIds[productId] = cartItemId;
+          }
+        });
+      }
+      
+      console.log('Cart map:', cartMap);
+      console.log('Cart IDs:', cartIds);
+      setCartItems(cartMap);
+      setCartItemIds(cartIds);
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+      setCartItems({});
+      setCartItemIds({});
     }
   };
 
@@ -157,8 +194,34 @@ export default function HomeScreen({ navigation }: any) {
   const handleAddToCart = async (product: Product) => {
     try {
       await cartAPI.addToCart(product.id, 1);
+      // Reload cart to get updated quantities
+      await loadCart();
     } catch (error) {
       console.error('Failed to add item to cart:', error);
+    }
+  };
+
+  const handleDecreaseQuantity = async (product: Product) => {
+    try {
+      const currentQuantity = cartItems[product.id] || 0;
+      const cartItemId = cartItemIds[product.id];
+      
+      if (currentQuantity <= 1) {
+        // Remove from cart if quantity is 1
+        if (cartItemId) {
+          await cartAPI.removeFromCart(cartItemId);
+        }
+      } else {
+        // Decrease quantity
+        if (cartItemId) {
+          await cartAPI.updateCartItem(cartItemId, currentQuantity - 1);
+        }
+      }
+      
+      // Reload cart to get updated quantities
+      await loadCart();
+    } catch (error) {
+      console.error('Failed to decrease quantity:', error);
     }
   };
 
@@ -319,13 +382,32 @@ export default function HomeScreen({ navigation }: any) {
                       <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
                       <Text style={styles.stockText}>Stock {product.stock}</Text>
                     </View>
-                    <TouchableOpacity 
-                      style={styles.addToCartButton}
-                      onPress={() => handleAddToCart(product)}
-                    >
-                      <Ionicons name="add" size={20} color="#fff" />
-                      <Text style={styles.addToCartText}>Add to Cart</Text>
-                    </TouchableOpacity>
+                    {cartItems[product.id] ? (
+                      <View style={styles.quantityControl}>
+                        <TouchableOpacity 
+                          style={styles.quantityButton}
+                          onPress={() => handleDecreaseQuantity(product)}
+                        >
+                          <Ionicons name="remove" size={16} color="#fff" />
+                        </TouchableOpacity>
+                        <View style={styles.quantityDisplay}>
+                          <Text style={styles.quantityText}>{cartItems[product.id]}</Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={styles.quantityButton}
+                          onPress={() => handleAddToCart(product)}
+                        >
+                          <Ionicons name="add" size={16} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.addToCartButton}
+                        onPress={() => handleAddToCart(product)}
+                      >
+                        <Ionicons name="add" size={20} color="#fff" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -591,17 +673,38 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 2,
   },
   addToCartButton: {
-    flexDirection: 'row',
     backgroundColor: theme.primaryDark,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.primaryDark,
+    borderRadius: 18,
+    paddingHorizontal: 4,
     gap: 4,
   },
-  addToCartText: {
-    color: theme.buttonText,
-    fontSize: 10,
-    fontWeight: '600',
+  quantityButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityDisplay: {
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  quantityText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
