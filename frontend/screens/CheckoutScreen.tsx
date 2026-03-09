@@ -14,13 +14,17 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { orderAPI, userAPI, API_BASE_URL } from "../lib/api";
-import { CartItem, User } from "../types";import { useTheme } from '../lib/theme';
+import { CartItem, User } from "../types";
+import { useTheme } from "../lib/theme";
+
 let PayPalScriptProvider: any = null;
 let PayPalButtons: any = null;
-if (Platform.OS === "web") {
-  const paypalModule = require("@paypal/react-paypal-js");
-  PayPalScriptProvider = paypalModule.PayPalScriptProvider;
-  PayPalButtons = paypalModule.PayPalButtons;
+if (Platform?.OS === "web") {
+  try {
+    const paypalModule = require("@paypal/react-paypal-js");
+    PayPalScriptProvider = paypalModule.PayPalScriptProvider;
+    PayPalButtons = paypalModule.PayPalButtons;
+  } catch (e) {}
 }
 
 const PAYPAL_CLIENT_ID =
@@ -148,7 +152,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
             billing_country: country.trim(),
           });
         } catch (saveError) {
-          console.error("Failed to save user address:", saveError);
+          console.error("Failed to save user address", saveError);
         }
       }
 
@@ -175,6 +179,20 @@ export default function CheckoutScreen({ route, navigation }: any) {
     }
   };
 
+  const capturePayPalOrder = async (orderId: string) => {
+    const token = await AsyncStorage.getItem("token");
+    const baseUrl = API_BASE_URL.replace("/api", "");
+    const captureResponse = await fetch(`${baseUrl}/api/paypal/capture-order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderId }),
+    });
+    return await captureResponse.json();
+  };
+
   const processMobilePayPal = async () => {
     try {
       setIsProcessing(true);
@@ -199,36 +217,54 @@ export default function CheckoutScreen({ route, navigation }: any) {
       }
 
       const { openAuthSessionAsync } = require("expo-web-browser");
+      const ExpoLinking = require("expo-linking");
+
+      let handled = false;
+
+      const subscription = ExpoLinking.addEventListener(
+        "url",
+        async ({ url }: { url: string }) => {
+          if (handled) return;
+          subscription.remove();
+          handled = true;
+          if (url.includes("payment-success")) {
+            const captureData = await capturePayPalOrder(orderId);
+            if (captureData.status === "COMPLETED") {
+              await completeOrder("PayPal");
+            } else {
+              Alert.alert("Payment Failed", "PayPal payment was not completed");
+              setIsProcessing(false);
+            }
+          } else {
+            Alert.alert("Cancelled", "PayPal payment was cancelled");
+            setIsProcessing(false);
+          }
+        },
+      );
+
       const result = await openAuthSessionAsync(
         approvalUrl,
         "freshcart://payment-success",
       );
 
-      if (result.type === "success") {
-        const captureResponse = await fetch(
-          `${baseUrl}/api/paypal/capture-order`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ orderId }),
-          },
-        );
-        const captureData = await captureResponse.json();
-        if (captureData.status === "COMPLETED") {
-          await completeOrder("PayPal");
+      if (!handled) {
+        subscription.remove();
+        if (result.type === "success") {
+          handled = true;
+          const captureData = await capturePayPalOrder(orderId);
+          if (captureData.status === "COMPLETED") {
+            await completeOrder("PayPal");
+          } else {
+            Alert.alert("Payment Failed", "PayPal payment was not completed");
+            setIsProcessing(false);
+          }
         } else {
-          Alert.alert("Payment Failed", "PayPal payment was not completed");
+          Alert.alert("Cancelled", "PayPal payment was cancelled");
           setIsProcessing(false);
         }
-      } else {
-        Alert.alert("Cancelled", "PayPal payment was cancelled");
-        setIsProcessing(false);
       }
     } catch (error) {
-      console.error("PayPal payment error:", error);
+      console.error("PayPal payment error", error);
       Alert.alert("Payment Error", "Failed to process PayPal payment");
       setIsProcessing(false);
     }
@@ -286,20 +322,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
             return orderId;
           }}
           onApprove={async (data: any) => {
-            const token = await AsyncStorage.getItem("token");
-            const baseUrl = API_BASE_URL.replace("/api", "");
-            const captureResponse = await fetch(
-              `${baseUrl}/api/paypal/capture-order`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ orderId: data.orderID }),
-              },
-            );
-            const captureData = await captureResponse.json();
+            const captureData = await capturePayPalOrder(data.orderID);
             if (captureData.status === "COMPLETED") {
               await completeOrder("PayPal");
             } else {
@@ -603,164 +626,182 @@ export default function CheckoutScreen({ route, navigation }: any) {
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.background },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: theme.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: theme.text },
-  scrollView: { flex: 1 },
-  section: {
-    backgroundColor: theme.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.text,
-    marginLeft: 8,
-  },
-  formGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", color: theme.text, marginBottom: 8 },
-  input: {
-    backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: theme.text,
-  },
-  inputContainer: { position: "relative" },
-  inputWithIcon: { paddingLeft: 44 },
-  inputIcon: { position: "absolute", left: 16, top: 14, zIndex: 1 },
-  textArea: { minHeight: 60, textAlignVertical: "top" },
-  rowInputs: { flexDirection: "row" },
-  selectContainer: { position: "relative" },
-  selectInput: { paddingRight: 40 },
-  selectIcon: { position: "absolute", right: 16, top: 14 },
-  summaryTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.text,
-    marginBottom: 16,
-  },
-  summaryItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  summaryItemText: { fontSize: 14, color: theme.primary, flex: 1 },
-  summaryItemPrice: { fontSize: 14, fontWeight: "500", color: theme.text },
-  divider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  summaryLabel: { fontSize: 14, color: theme.textSecondary },
-  summaryValue: { fontSize: 14, fontWeight: "500", color: theme.text },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  totalLabel: { fontSize: 16, fontWeight: "700", color: theme.text },
-  totalValue: { fontSize: 22, fontWeight: "bold", color: theme.text },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.card,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  placeOrderButton: {
-    backgroundColor: theme.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  placeOrderButtonDisabled: { backgroundColor: theme.textTertiary },
-  placeOrderText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    marginLeft: 8,
-  },
-  paymentOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderWidth: 2,
-    borderColor: theme.border,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  paymentOptionSelected: { borderColor: theme.success, backgroundColor: '#f0fdf4' },
-  paymentOptionLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  paymentOptionText: { fontSize: 15, fontWeight: "500", color: theme.text },
-  radioButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.textTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioButtonSelected: { borderColor: theme.success },
-  radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.success,
-  },
-  paymentInfo: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#eff6ff",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 4,
-    gap: 8,
-  },
-  paymentInfoText: { flex: 1, fontSize: 13, color: "#1e40af", lineHeight: 18 },
-  paypalButtonsContainer: { marginTop: 12 },
-  paypalDisabled: {
-    padding: 16,
-    backgroundColor: theme.border,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  paypalDisabledText: { fontSize: 13, color: theme.textSecondary, textAlign: "center" },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: theme.card,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    backButton: { padding: 4 },
+    headerTitle: { fontSize: 18, fontWeight: "600", color: theme.text },
+    scrollView: { flex: 1 },
+    section: {
+      backgroundColor: theme.card,
+      marginHorizontal: 16,
+      marginTop: 16,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.text,
+      marginLeft: 8,
+    },
+    formGroup: { marginBottom: 16 },
+    label: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: theme.text,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: theme.text,
+    },
+    inputContainer: { position: "relative" },
+    inputWithIcon: { paddingLeft: 44 },
+    inputIcon: { position: "absolute", left: 16, top: 14, zIndex: 1 },
+    textArea: { minHeight: 60, textAlignVertical: "top" },
+    rowInputs: { flexDirection: "row" },
+    selectContainer: { position: "relative" },
+    selectInput: { paddingRight: 40 },
+    selectIcon: { position: "absolute", right: 16, top: 14 },
+    summaryTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 16,
+    },
+    summaryItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    summaryItemText: { fontSize: 14, color: theme.primary, flex: 1 },
+    summaryItemPrice: { fontSize: 14, fontWeight: "500", color: theme.text },
+    divider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
+    summaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    summaryLabel: { fontSize: 14, color: theme.textSecondary },
+    summaryValue: { fontSize: 14, fontWeight: "500", color: theme.text },
+    totalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 4,
+    },
+    totalLabel: { fontSize: 16, fontWeight: "700", color: theme.text },
+    totalValue: { fontSize: 22, fontWeight: "bold", color: theme.text },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    placeOrderButton: {
+      backgroundColor: theme.primary,
+      paddingVertical: 16,
+      borderRadius: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    placeOrderButtonDisabled: { backgroundColor: theme.textTertiary },
+    placeOrderText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "700",
+      marginLeft: 8,
+    },
+    paymentOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderWidth: 2,
+      borderColor: theme.border,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    paymentOptionSelected: {
+      borderColor: theme.success,
+      backgroundColor: "#f0fdf4",
+    },
+    paymentOptionLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+    paymentOptionText: { fontSize: 15, fontWeight: "500", color: theme.text },
+    radioButton: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: theme.textTertiary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioButtonSelected: { borderColor: theme.success },
+    radioButtonInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: theme.success,
+    },
+    paymentInfo: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      backgroundColor: "#eff6ff",
+      padding: 12,
+      borderRadius: 8,
+      marginTop: 4,
+      gap: 8,
+    },
+    paymentInfoText: {
+      flex: 1,
+      fontSize: 13,
+      color: "#1e40af",
+      lineHeight: 18,
+    },
+    paypalButtonsContainer: { marginTop: 12 },
+    paypalDisabled: {
+      padding: 16,
+      backgroundColor: theme.border,
+      borderRadius: 8,
+      marginTop: 8,
+    },
+    paypalDisabledText: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+  });
