@@ -17,7 +17,7 @@ const createRes = () => {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
 });
 
 describe('product.controller', () => {
@@ -42,7 +42,9 @@ describe('product.controller', () => {
 
   test('createProduct returns 201', async () => {
     const product = { id: 2, name: 'Bread' };
-    pool.query.mockResolvedValueOnce({ rows: [product] });
+    pool.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [product] });
     const req = {
       body: {
         name: 'Bread',
@@ -65,14 +67,92 @@ describe('product.controller', () => {
     expect(res.json).toHaveBeenCalledWith(product);
   });
 
+  test('createProduct returns 409 when barcode already exists', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 10 }] });
+    const req = {
+      body: {
+        name: 'Milk',
+        price: 3,
+        barcode: '12345678',
+      },
+    };
+    const res = createRes();
+
+    await createProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'DUPLICATE_BARCODE' }),
+    );
+  });
+
   test('updateProduct returns 404 when missing', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [] });
+    pool.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
     const req = { params: { id: '12' }, body: {} };
     const res = createRes();
 
     await updateProduct(req, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('updateProduct blocks duplicate barcode from another product', async () => {
+    pool.query.mockImplementation(async (sql) => {
+      if (String(sql).includes('AND id <> $2')) {
+        return { rows: [{ id: 99 }] };
+      }
+      return { rows: [] };
+    });
+
+    const req = {
+      params: { id: '12' },
+      body: { barcode: '12345678' },
+    };
+    const res = createRes();
+
+    await updateProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'DUPLICATE_BARCODE' }),
+    );
+  });
+
+  test('updateProduct allows same product keeping same barcode', async () => {
+    const updated = { id: 12, barcode: '12345678' };
+    pool.query.mockImplementation(async (sql) => {
+      if (String(sql).includes('AND id <> $2')) {
+        return { rows: [] };
+      }
+      if (String(sql).includes('UPDATE products SET')) {
+        return { rows: [updated] };
+      }
+      return { rows: [] };
+    });
+
+    const req = {
+      params: { id: '12' },
+      body: {
+        name: 'Milk',
+        price: 5,
+        description: 'desc',
+        brand: 'brand',
+        picture: 'x.png',
+        category: 'food',
+        barcode: '12345678',
+        nutrition_grade: 'A',
+        nutritional_info: {},
+        quantity: 10,
+      },
+    };
+    const res = createRes();
+
+    await updateProduct(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(updated);
   });
 
   test('deleteProduct returns success message', async () => {

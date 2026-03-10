@@ -35,6 +35,23 @@ const API_BASE_URL = getApiBaseUrl();
 
 // Data transformation function: convert backend product data to frontend Product type
 const transformProduct = (dbProduct: any): Product => {
+  let nutritionalInfo = dbProduct.nutritional_info || dbProduct.nutritionalInfo || undefined;
+
+  if (typeof nutritionalInfo === 'string') {
+    try {
+      nutritionalInfo = JSON.parse(nutritionalInfo);
+    } catch {
+      nutritionalInfo = undefined;
+    }
+  }
+
+  if (nutritionalInfo && dbProduct.nutrition_grade && !nutritionalInfo.nutriscore_grade) {
+    nutritionalInfo = {
+      ...nutritionalInfo,
+      nutriscore_grade: dbProduct.nutrition_grade,
+    };
+  }
+
   return {
     id: dbProduct.id?.toString() || '',
     name: dbProduct.name || '',
@@ -44,6 +61,8 @@ const transformProduct = (dbProduct: any): Product => {
     description: dbProduct.description || '',
     barcode: dbProduct.barcode || '',
     stock: dbProduct.quantity || 0,
+    brand: dbProduct.brand || '',
+    nutritionalInfo,
   };
 };
 

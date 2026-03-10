@@ -54,7 +54,7 @@ const findProductByBarcode = async (req, res) => {
     }
 
     const product = await pool.query(
-      `SELECT id, name, picture, brand, category, nutritional_info, nutrition_grade, price, quantity, barcode
+      `SELECT id, name, description, picture, brand, category, nutritional_info, nutrition_grade, price, quantity, barcode
        FROM products
        WHERE barcode = $1
        LIMIT 1`,

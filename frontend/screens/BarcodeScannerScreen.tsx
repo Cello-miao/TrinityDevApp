@@ -9,15 +9,20 @@ import {
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { scannerAPI } from '../lib/api';
-import { useTheme } from '../lib/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { scannerAPI, productAPI } from '../lib/api';
+import { useTheme, useAccessibility } from '../lib/theme';
 
-export default function BarcodeScannerScreen({ navigation }: any) {
+const USER_SCAN_AUTO_OPEN_DETAIL_KEY = 'user_scan_auto_open_detail';
+
+export default function BarcodeScannerScreen({ navigation, route }: any) {
   const theme = useTheme();
+  const { reduceMotion } = useAccessibility();
   const styles = createStyles(theme);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [userScanAutoOpenDetail, setUserScanAutoOpenDetail] = useState(true);
   const scanLineAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -27,11 +32,27 @@ export default function BarcodeScannerScreen({ navigation }: any) {
     };
 
     getCameraPermissions();
+
+    const loadScannerPreference = async () => {
+      try {
+        const storedValue = await AsyncStorage.getItem(USER_SCAN_AUTO_OPEN_DETAIL_KEY);
+        setUserScanAutoOpenDetail(storedValue === null ? true : storedValue === 'true');
+      } catch (error) {
+        console.error('Failed to load scanner preference:', error);
+        setUserScanAutoOpenDetail(true);
+      }
+    };
+
+    loadScannerPreference();
   }, []);
 
   useEffect(() => {
+    if (reduceMotion) {
+      return;
+    }
+
     // Animate scan line
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scanLineAnim, {
           toValue: 1,
@@ -44,8 +65,13 @@ export default function BarcodeScannerScreen({ navigation }: any) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, []);
+    );
+
+    animation.start();
+    return () => {
+      animation.stop();
+    };
+  }, [reduceMotion, scanLineAnim]);
 
   const handleBarCodeScanned = async ({ data }: any) => {
     setScanned(true);
@@ -60,19 +86,59 @@ export default function BarcodeScannerScreen({ navigation }: any) {
       );
       return;
     }
+
+    const isAdminProductScan = route?.params?.mode === 'adminProduct';
+    const onBarcodeScanned = route?.params?.onBarcodeScanned;
+
+    if (isAdminProductScan) {
+      if (typeof onBarcodeScanned === 'function') {
+        onBarcodeScanned(barcode);
+        navigation.goBack();
+        return;
+      }
+
+      navigation.navigate('AdminDashboard', {
+        screen: 'Products',
+        params: {
+          adminScannedBarcode: barcode,
+          adminScanNonce: Date.now(),
+        },
+      });
+      return;
+    }
     
     try {
       const product = await scannerAPI.lookupByBarcode(barcode);
+
+      const getProductForDetail = async () => {
+        if (!product?.id) {
+          return product;
+        }
+
+        try {
+          return await productAPI.getProductById(String(product.id));
+        } catch (detailError) {
+          console.error('Failed to load full product detail:', detailError);
+          return product;
+        }
+      };
     
       if (product) {
+        if (userScanAutoOpenDetail) {
+          const fullProduct = await getProductForDetail();
+          navigation.replace('ProductDetail', { product: fullProduct });
+          return;
+        }
+
         Alert.alert(
           'Product Found',
           `${product.name}`,
           [
             {
               text: 'View Details',
-              onPress: () => {
-                navigation.replace('ProductDetail', { product });
+              onPress: async () => {
+                const fullProduct = await getProductForDetail();
+                navigation.replace('ProductDetail', { product: fullProduct });
               },
             },
             {
@@ -190,21 +256,25 @@ export default function BarcodeScannerScreen({ navigation }: any) {
               <View style={[styles.corner, styles.bottomRight]} />
               
               {/* Animated Scan Line */}
-              <Animated.View
-                style={[
-                  styles.scanLine,
-                  {
-                    transform: [
-                      {
-                        translateY: scanLineAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-100, 100],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
+              {!reduceMotion ? (
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    {
+                      transform: [
+                        {
+                          translateY: scanLineAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-100, 100],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              ) : (
+                <View style={styles.scanLine} />
+              )}
             </View>
           </View>
 

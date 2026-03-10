@@ -1,5 +1,12 @@
 const pool = require("../config/db");
 
+const normalizeBarcode = (barcode) => {
+  if (barcode === undefined || barcode === null) {
+    return "";
+  }
+  return String(barcode).trim();
+};
+
 const getAllProducts = async (req, res) => {
   try {
     const products = await pool.query("SELECT * FROM products");
@@ -38,6 +45,22 @@ const createProduct = async (req, res) => {
       nutritional_info,
       quantity,
     } = req.body;
+
+    const normalizedBarcode = normalizeBarcode(barcode);
+    if (normalizedBarcode) {
+      const existing = await pool.query(
+        "SELECT id FROM products WHERE LOWER(barcode) = LOWER($1) LIMIT 1",
+        [normalizedBarcode],
+      );
+
+      if (existing.rows.length > 0) {
+        return res.status(409).json({
+          code: "DUPLICATE_BARCODE",
+          message: "A product with this barcode already exists.",
+        });
+      }
+    }
+
     const newProduct = await pool.query(
       `INSERT INTO products (name, price, description, brand, picture, category, barcode, nutrition_grade, nutritional_info, quantity)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
@@ -48,7 +71,7 @@ const createProduct = async (req, res) => {
         brand,
         picture,
         category,
-        barcode,
+        normalizedBarcode,
         nutrition_grade,
         nutritional_info,
         quantity,
@@ -75,6 +98,22 @@ const updateProduct = async (req, res) => {
       nutritional_info,
       quantity,
     } = req.body;
+
+    const normalizedBarcode = normalizeBarcode(barcode);
+    if (normalizedBarcode) {
+      const existing = await pool.query(
+        "SELECT id FROM products WHERE LOWER(barcode) = LOWER($1) AND id <> $2 LIMIT 1",
+        [normalizedBarcode, id],
+      );
+
+      if (existing.rows.length > 0) {
+        return res.status(409).json({
+          code: "DUPLICATE_BARCODE",
+          message: "A product with this barcode already exists.",
+        });
+      }
+    }
+
     const updatedProduct = await pool.query(
       `UPDATE products SET name=$1, price=$2, description=$3, brand=$4, picture=$5, 
       category=$6, barcode=$7, nutrition_grade=$8, nutritional_info=$9, quantity=$10,
@@ -86,7 +125,7 @@ const updateProduct = async (req, res) => {
         brand,
         picture,
         category,
-        barcode,
+        normalizedBarcode,
         nutrition_grade,
         nutritional_info,
         quantity,

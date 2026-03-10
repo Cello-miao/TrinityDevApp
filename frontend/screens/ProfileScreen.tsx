@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,12 @@ import {
   ScrollView,
   Alert,
   SafeAreaView,
+  Switch,
+  Modal,
+  Pressable,
+  Dimensions,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,17 +20,25 @@ import { User } from '../types';
 import { logout } from '../lib/auth';
 import { userAPI, orderAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
-import { useTheme, useThemeMode, ThemeMode } from '../lib/theme';
+import { useTheme, useThemeMode, useAccessibility } from '../lib/theme';
+
+const USER_SCAN_AUTO_OPEN_DETAIL_KEY = 'user_scan_auto_open_detail';
 
 export default function ProfileScreen({ navigation }: any) {
   const theme = useTheme();
   const { themeMode, setThemeMode, isDark } = useThemeMode();
-  const styles = createStyles(theme);
+  const { fontScale, setFontScale, highContrast, setHighContrast, reduceMotion, setReduceMotion, getFontSize } = useAccessibility();
+  const styles = createStyles(theme, getFontSize);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderCount, setOrderCount] = useState(0);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [userScanAutoOpenDetail, setUserScanAutoOpenDetail] = useState(true);
+  const [showScanInfo, setShowScanInfo] = useState(false);
+  const [scanInfoAnchor, setScanInfoAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [scanInfoPopoverHeight, setScanInfoPopoverHeight] = useState(0);
+  const scanInfoButtonRef = useRef<TouchableOpacity | null>(null);
 
   const loadUserData = async () => {
     setLoading(true);
@@ -73,8 +87,29 @@ export default function ProfileScreen({ navigation }: any) {
   useFocusEffect(
     React.useCallback(() => {
       loadUserData();
+      loadScannerPreference();
     }, [])
   );
+
+  const loadScannerPreference = async () => {
+    try {
+      const storedValue = await AsyncStorage.getItem(USER_SCAN_AUTO_OPEN_DETAIL_KEY);
+      setUserScanAutoOpenDetail(storedValue === null ? true : storedValue === 'true');
+    } catch (error) {
+      console.error('Failed to load scanner preference:', error);
+      setUserScanAutoOpenDetail(true);
+    }
+  };
+
+  const handleToggleUserScanAutoOpen = async (value: boolean) => {
+    setUserScanAutoOpenDetail(value);
+    try {
+      await AsyncStorage.setItem(USER_SCAN_AUTO_OPEN_DETAIL_KEY, String(value));
+    } catch (error) {
+      console.error('Failed to save scanner preference:', error);
+      Alert.alert('Error', 'Failed to save setting');
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -88,6 +123,47 @@ export default function ProfileScreen({ navigation }: any) {
       },
     ]);
   };
+
+  const handleFontScaleStep = (delta: number) => {
+    const nextScale = Math.min(1.4, Math.max(0.8, Number((fontScale + delta).toFixed(2))));
+    setFontScale(nextScale);
+  };
+
+  const openScanInfoPopover = () => {
+    scanInfoButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setScanInfoPopoverHeight(0);
+      setScanInfoAnchor({ x, y, width, height });
+      setShowScanInfo(true);
+    });
+  };
+
+  const windowWidth = Dimensions.get('window').width;
+  const windowHeight = Dimensions.get('window').height;
+  const topSafeInset = (Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0) + 10;
+  const bottomSafeInset = 12;
+  const anchorGap = 10;
+  const estimatedPopoverHeight = scanInfoPopoverHeight || Math.round(128 * fontScale);
+  const desiredWidth = Math.round(240 * fontScale);
+  const popoverWidth = Math.min(Math.max(220, desiredWidth), windowWidth - 24);
+  const popoverLeft = Math.min(
+    Math.max(12, scanInfoAnchor.x + scanInfoAnchor.width - popoverWidth),
+    windowWidth - popoverWidth - 12,
+  );
+  const popoverTopWhenBelow = scanInfoAnchor.y + scanInfoAnchor.height + anchorGap;
+  const popoverTopWhenAbove = scanInfoAnchor.y - estimatedPopoverHeight - anchorGap;
+  const canOpenBelow = popoverTopWhenBelow + estimatedPopoverHeight <= windowHeight - bottomSafeInset;
+  const canOpenAbove = popoverTopWhenAbove >= topSafeInset;
+  const openAboveAnchor = !canOpenBelow && canOpenAbove;
+  const popoverTop = openAboveAnchor
+    ? popoverTopWhenAbove
+    : Math.min(
+        Math.max(topSafeInset, popoverTopWhenBelow),
+        windowHeight - estimatedPopoverHeight - bottomSafeInset,
+      );
+  const arrowLeft = Math.min(
+    popoverWidth - 26,
+    Math.max(16, scanInfoAnchor.x + scanInfoAnchor.width / 2 - popoverLeft - 8),
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -204,6 +280,87 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         </View>
 
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Accessibility</Text>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: theme.searchBackground }]}>
+                <Ionicons name="text" size={24} color={theme.primary} />
+              </View>
+              <Text style={styles.menuText}>Font Size</Text>
+            </View>
+            <View style={styles.themeOptions}>
+              <TouchableOpacity
+                style={styles.themeOption}
+                onPress={() => handleFontScaleStep(-0.05)}
+              >
+                <Text style={styles.themeOptionText}>-</Text>
+              </TouchableOpacity>
+              <View style={[styles.themeOption, styles.fontScaleValue]}>
+                <Text style={styles.themeOptionText}>{Math.round(fontScale * 100)}%</Text>
+              </View>
+              <TouchableOpacity style={styles.themeOption} onPress={() => handleFontScaleStep(0.05)}>
+                <Text style={styles.themeOptionText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: theme.searchBackground }]}>
+                <Ionicons name="contrast-outline" size={24} color={theme.primary} />
+              </View>
+              <Text style={styles.menuText}>High Contrast</Text>
+            </View>
+            <Switch
+              value={highContrast}
+              onValueChange={setHighContrast}
+              trackColor={{ false: '#cbd5e1', true: theme.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: theme.searchBackground }]}>
+                <Ionicons name="speedometer-outline" size={24} color={theme.primary} />
+              </View>
+              <Text style={styles.menuText}>Reduce Motion</Text>
+            </View>
+            <Switch
+              value={reduceMotion}
+              onValueChange={setReduceMotion}
+              trackColor={{ false: '#cbd5e1', true: theme.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
+
+          <View style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: theme.searchBackground }]}>
+                <Ionicons name="scan-outline" size={24} color={theme.primary} />
+              </View>
+              <View style={styles.scanSettingTitleRow}>
+                <Text style={styles.menuText}>Scan Product Detail</Text>
+                <TouchableOpacity
+                  ref={scanInfoButtonRef}
+                  style={styles.infoButton}
+                  onPress={openScanInfoPopover}
+                >
+                  <Ionicons name="help-circle-outline" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Switch
+              value={userScanAutoOpenDetail}
+              onValueChange={handleToggleUserScanAutoOpen}
+              trackColor={{ false: '#cbd5e1', true: theme.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
+        </View>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#64748b" />
@@ -215,11 +372,47 @@ export default function ProfileScreen({ navigation }: any) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Modal visible={showScanInfo} transparent animationType="fade" onRequestClose={() => setShowScanInfo(false)}>
+        <Pressable style={styles.popoverBackdrop} onPress={() => setShowScanInfo(false)}>
+          <Pressable
+            style={[
+              styles.popoverCard,
+              {
+                width: popoverWidth,
+                left: popoverLeft,
+                top: popoverTop,
+              },
+            ]}
+            onLayout={(event) => setScanInfoPopoverHeight(event.nativeEvent.layout.height)}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View
+              style={[
+                styles.popoverArrow,
+                openAboveAnchor ? styles.popoverArrowUp : styles.popoverArrowDown,
+                { left: arrowLeft },
+              ]}
+            />
+            <View style={styles.popoverHeader}>
+              <Ionicons name="information-circle-outline" size={getFontSize(16)} color={theme.primary} />
+              <Text style={styles.popoverTitle}>Scan Setting Details</Text>
+            </View>
+            <Text style={styles.popoverText}>
+              Enabled: after a successful scan, the app opens product details immediately.
+            </Text>
+            <Text style={styles.popoverText}>
+              Disabled: after scan, you can choose to view details or continue scanning.
+            </Text>
+            <Text style={styles.popoverHint}>Tap outside to close.</Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
+const createStyles = (theme: any, getFontSize: (baseSize: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -231,7 +424,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.card,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: getFontSize(28),
     fontWeight: 'bold',
     color: theme.text,
   },
@@ -260,7 +453,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 22,
+    fontSize: getFontSize(22),
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 6,
@@ -271,7 +464,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 6,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     color: '#cbd5e1',
   },
   statsContainer: {
@@ -285,13 +478,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 28,
+    fontSize: getFontSize(28),
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: getFontSize(13),
     color: '#cbd5e1',
   },
   menuSection: {
@@ -302,7 +495,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     overflow: 'hidden',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     fontWeight: '600',
     color: theme.textSecondary,
     paddingHorizontal: 16,
@@ -331,9 +524,75 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   menuText: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     color: theme.text,
     fontWeight: '500',
+  },
+  scanSettingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoButton: {
+    padding: 2,
+  },
+  popoverBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  popoverCard: {
+    position: 'absolute',
+    borderRadius: 12,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  popoverArrow: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    backgroundColor: theme.card,
+    borderColor: theme.border,
+    transform: [{ rotate: '45deg' }],
+  },
+  popoverArrowDown: {
+    top: -8,
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+  },
+  popoverArrowUp: {
+    bottom: -8,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+  },
+  popoverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  popoverTitle: {
+    fontSize: getFontSize(13),
+    fontWeight: '700',
+    color: theme.text,
+  },
+  popoverText: {
+    fontSize: getFontSize(12),
+    color: theme.textSecondary,
+    lineHeight: getFontSize(16),
+    marginBottom: 4,
+  },
+  popoverHint: {
+    marginTop: 4,
+    fontSize: getFontSize(11),
+    color: theme.textTertiary,
   },
   menuRight: {
     flexDirection: 'row',
@@ -350,7 +609,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   badgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: getFontSize(12),
     fontWeight: 'bold',
   },
   themeOptions: {
@@ -373,8 +632,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.primary,
     borderColor: theme.accent,
   },
+  fontScaleValue: {
+    minWidth: 72,
+    justifyContent: 'center',
+  },
   themeOptionText: {
-    fontSize: 13,
+    fontSize: getFontSize(13),
     fontWeight: '600',
     color: theme.textSecondary,
   },
@@ -395,13 +658,13 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
     color: theme.textSecondary,
   },
   versionText: {
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: getFontSize(13),
     color: theme.textTertiary,
     marginTop: 24,
   },

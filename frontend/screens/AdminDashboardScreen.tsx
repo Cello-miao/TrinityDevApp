@@ -14,12 +14,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../types';
 import { productAPI } from '../lib/api';
 import { fetchProductByBarcode, searchProducts } from '../lib/openfoodfacts';
 import { useTheme } from '../lib/theme';
 
-export default function AdminDashboardScreen({ navigation }: any) {
+const AUTO_FETCH_AFTER_SCAN_KEY = 'admin_auto_fetch_after_scan';
+const ADMIN_SCAN_AUTO_FILL_AND_EXIT_KEY = 'admin_scan_auto_fill_and_exit';
+
+export default function AdminDashboardScreen({ navigation, route }: any) {
   const theme = useTheme();
   const styles = createStyles(theme);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +43,8 @@ export default function AdminDashboardScreen({ navigation }: any) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isFetchingBarcode, setIsFetchingBarcode] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [autoFetchAfterScan, setAutoFetchAfterScan] = useState(true);
+  const [adminScanAutoFillAndExit, setAdminScanAutoFillAndExit] = useState(true);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -52,6 +59,49 @@ export default function AdminDashboardScreen({ navigation }: any) {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadScannerSettings();
+    }, [])
+  );
+
+  useEffect(() => {
+    const scannedBarcode = route?.params?.adminScannedBarcode;
+    const scanNonce = route?.params?.adminScanNonce;
+
+    if (!scannedBarcode || !scanNonce) {
+      return;
+    }
+
+    setIsAddModalVisible(true);
+    setNewProduct((prev) => ({ ...prev, barcode: scannedBarcode }));
+
+    if (autoFetchAfterScan) {
+      fetchBarcodeData(scannedBarcode);
+    }
+
+    navigation.setParams({
+      adminScannedBarcode: undefined,
+      adminScanNonce: undefined,
+    });
+  }, [route?.params?.adminScannedBarcode, route?.params?.adminScanNonce, autoFetchAfterScan]);
+
+  const loadScannerSettings = async () => {
+    try {
+      const [autoFetchValue, autoFillValue] = await Promise.all([
+        AsyncStorage.getItem(AUTO_FETCH_AFTER_SCAN_KEY),
+        AsyncStorage.getItem(ADMIN_SCAN_AUTO_FILL_AND_EXIT_KEY),
+      ]);
+
+      setAutoFetchAfterScan(autoFetchValue === null ? true : autoFetchValue === 'true');
+      setAdminScanAutoFillAndExit(autoFillValue === null ? true : autoFillValue === 'true');
+    } catch (error) {
+      console.error('Failed to load scanner settings:', error);
+      setAutoFetchAfterScan(true);
+      setAdminScanAutoFillAndExit(true);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -128,15 +178,15 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return category;
   };
 
-  const handleFetchBarcode = async () => {
-    if (!newProduct.barcode) {
+  const fetchBarcodeData = async (barcode: string) => {
+    if (!barcode) {
       Alert.alert('Error', 'Please enter a barcode first');
       return;
     }
 
     setIsFetchingBarcode(true);
     try {
-      const data = await fetchProductByBarcode(newProduct.barcode);
+      const data = await fetchProductByBarcode(barcode);
       if (data && data.product) {
         setNewProduct(prev => {
           // Extract the first category from the comma-separated list if available
@@ -165,6 +215,21 @@ export default function AdminDashboardScreen({ navigation }: any) {
     } finally {
       setIsFetchingBarcode(false);
     }
+  };
+
+  const handleFetchBarcode = async () => {
+    await fetchBarcodeData(newProduct.barcode);
+  };
+
+  const handleScanBarcode = () => {
+    if (adminScanAutoFillAndExit) {
+      navigation.navigate('Scanner', {
+        mode: 'adminProduct',
+      });
+      return;
+    }
+
+    navigation.navigate('Scanner');
   };
 
   const pickImage = async () => {
@@ -199,6 +264,21 @@ export default function AdminDashboardScreen({ navigation }: any) {
       return;
     }
 
+    const normalizedBarcode = newProduct.barcode.trim();
+    if (normalizedBarcode) {
+      const duplicate = products.find((product) => {
+        if (editingProductId && product.id === editingProductId) {
+          return false;
+        }
+        return (product.barcode || '').trim().toLowerCase() === normalizedBarcode.toLowerCase();
+      });
+
+      if (duplicate) {
+        Alert.alert('Duplicate Barcode', 'A product with this barcode already exists. Please use a different barcode.');
+        return;
+      }
+    }
+
     setIsSavingProduct(true);
     try {
       const productData = {
@@ -206,7 +286,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
         price: parseFloat(newProduct.price),
         description: newProduct.description,
         category: newProduct.category,
-        barcode: newProduct.barcode,
+        barcode: normalizedBarcode,
         image: newProduct.image || 'https://via.placeholder.com/150',
         stock: parseInt(newProduct.stock) || 0,
       };
@@ -233,7 +313,8 @@ export default function AdminDashboardScreen({ navigation }: any) {
       loadProducts();
     } catch (error) {
       console.error('Failed to save product:', error);
-      Alert.alert('Error', 'Failed to save product');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save product';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsSavingProduct(false);
     }
@@ -415,17 +496,30 @@ export default function AdminDashboardScreen({ navigation }: any) {
                     onChangeText={(text) => setNewProduct({ ...newProduct, barcode: text })}
                     keyboardType="numeric"
                   />
-                  <TouchableOpacity 
-                    style={styles.fetchButton}
-                    onPress={handleFetchBarcode}
-                    disabled={isFetchingBarcode}
-                  >
-                    {isFetchingBarcode ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.fetchButtonText}>Fetch Data</Text>
-                    )}
-                  </TouchableOpacity>
+                  <View style={styles.barcodeActions}>
+                    <TouchableOpacity
+                      style={styles.scanButton}
+                      onPress={handleScanBarcode}
+                      accessibilityRole="button"
+                      accessibilityLabel="Scan barcode"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="scan-outline" size={18} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.fetchButton}
+                      onPress={handleFetchBarcode}
+                      disabled={isFetchingBarcode}
+                      accessibilityRole="button"
+                      accessibilityLabel="Fetch product data by barcode"
+                    >
+                      {isFetchingBarcode ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.fetchButtonText}>Fetch Data</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <Text style={styles.helpText}>Fetch product details from OpenFoodFacts</Text>
               </View>
@@ -842,6 +936,12 @@ const createStyles = (theme: any) => StyleSheet.create({
   barcodeInputContainer: {
     flexDirection: 'row',
     gap: 10,
+    alignItems: 'center',
+  },
+  barcodeActions: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
   fetchButton: {
     backgroundColor: theme.primary,
@@ -855,6 +955,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  scanButton: {
+    backgroundColor: theme.primaryDark,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    minWidth: 44,
   },
   helpText: {
     fontSize: 12,

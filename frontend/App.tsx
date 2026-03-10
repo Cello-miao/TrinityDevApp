@@ -225,7 +225,10 @@ function AppContent() {
           <Stack.Screen 
             name="Scanner" 
             component={BarcodeScannerScreen}
-            options={{ title: 'Scan Barcode' }}
+            options={{
+              headerShown: false,
+              animation: 'none',
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>
