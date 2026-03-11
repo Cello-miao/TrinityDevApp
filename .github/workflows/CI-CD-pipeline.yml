@@ -123,17 +123,29 @@ jobs:
               exit 1
             fi
 
-            if grep -q '^DOCKERHUB_USERNAME=' .env; then
-              sed -i "s/^DOCKERHUB_USERNAME=.*/DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}/" .env
-            else
-              echo "DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}" >> .env
-            fi
+            # Upsert all secrets into .env so the container gets correct runtime config
+            upsert_env() {
+              local key="$1" val="$2"
+              if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${val}|" .env
+              else
+                echo "${key}=${val}" >> .env
+              fi
+            }
 
-            if grep -q '^IMAGE_TAG=' .env; then
-              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-            else
-              echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
-            fi
+            upsert_env DOCKERHUB_USERNAME "${DOCKERHUB_USERNAME}"
+            upsert_env IMAGE_TAG          "${IMAGE_TAG}"
+            upsert_env DB_USER            "${DB_USER}"
+            upsert_env DB_PASSWORD        "${DB_PASSWORD}"
+            upsert_env DB_NAME            "${DB_NAME}"
+            upsert_env DB_PORT            "${DB_PORT}"
+            upsert_env JWT_SECRET         "${JWT_SECRET}"
+            upsert_env PAYPAL_CLIENT_ID   "${PAYPAL_CLIENT_ID}"
+            upsert_env PAYPAL_CLIENT_SECRET "${PAYPAL_CLIENT_SECRET}"
+            upsert_env PAYPAL_MODE        "${PAYPAL_MODE}"
+            upsert_env PAYPAL_RETURN_URL  "${PAYPAL_RETURN_URL}"
+            upsert_env PAYPAL_CANCEL_URL  "${PAYPAL_CANCEL_URL}"
+            upsert_env CORS_ORIGINS       "${CORS_ORIGINS}"
 
             docker compose -f docker-compose.http.yml --env-file .env pull
             docker compose -f docker-compose.http.yml --env-file .env up -d --remove-orphans
