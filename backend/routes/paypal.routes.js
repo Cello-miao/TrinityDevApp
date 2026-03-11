@@ -5,6 +5,13 @@ const verifyToken = require("../middleware/auth");
 
 const PAYPAL_API = "https://api-m.sandbox.paypal.com";
 
+const isValidRedirectUrl = (value) => {
+  if (typeof value !== "string") {
+    return false;
+  }
+  return /^(https?:\/\/|[a-z][a-z0-9+.-]*:\/\/)/i.test(value.trim());
+};
+
 const getAccessToken = async () => {
   const response = await axios.post(
     `${PAYPAL_API}/v1/oauth2/token`,
@@ -23,7 +30,14 @@ const getAccessToken = async () => {
 
 router.post("/create-order", verifyToken, async (req, res) => {
   try {
-    const { amount, currency = "EUR" } = req.body;
+    const { amount, currency = "EUR", returnUrl, cancelUrl } = req.body;
+    const resolvedReturnUrl = isValidRedirectUrl(returnUrl)
+      ? returnUrl
+      : process.env.PAYPAL_RETURN_URL || "freshcart://payment-success";
+    const resolvedCancelUrl = isValidRedirectUrl(cancelUrl)
+      ? cancelUrl
+      : process.env.PAYPAL_CANCEL_URL || "freshcart://payment-cancel";
+
     console.log("Getting access token");
     const accessToken = await getAccessToken();
     console.log("Got token creating order");
@@ -41,8 +55,8 @@ router.post("/create-order", verifyToken, async (req, res) => {
           },
         ],
         application_context: {
-          return_url: "freshcart://payment-success",
-          cancel_url: "freshcart://payment-cancel",
+          return_url: resolvedReturnUrl,
+          cancel_url: resolvedCancelUrl,
           user_action: "PAY_NOW",
         },
       },

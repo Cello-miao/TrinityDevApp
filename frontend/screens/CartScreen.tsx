@@ -6,15 +6,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Alert,
-  SafeAreaView,
-} from 'react-native';
+  SafeAreaView
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartItem, Product } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
 import { cartAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 const DELIVERY_FEE = 10.0;
 const FREE_DELIVERY_THRESHOLD = 100.0;
@@ -113,7 +114,7 @@ export default function CartScreen({ navigation }: any) {
         console.error('Failed to reload cart:', reloadError);
       }
       
-      Alert.alert('Error', `Failed to update quantity: ${error.message || 'Please try again.'}`);
+      showAppAlert('Error', `Failed to update quantity: ${error.message || 'Please try again.'}`);
     }
   };
 
@@ -140,7 +141,7 @@ export default function CartScreen({ navigation }: any) {
         console.error('Failed to reload cart:', reloadError);
       }
       
-      Alert.alert('Error', 'Failed to remove item from cart');
+      showAppAlert('Error', 'Failed to remove item from cart');
     }
   };
 

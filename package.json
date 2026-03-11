@@ -7,7 +7,7 @@
     "backend:dev": "npm --prefix backend run dev",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f backend db",
+    "docker:logs": "docker compose logs -f nginx backend db",
     "docker:test": "docker compose --profile test run --rm --no-deps tests",
     "start": "expo start",
     "android": "expo run:android",

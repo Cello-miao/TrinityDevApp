@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -28,6 +28,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      NODE_ENV: ${NODE_ENV:-development}
       DB_HOST: ${DB_HOST:-db}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -40,8 +41,23 @@ services:
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
       PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-freshcart://payment-success}
       PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-freshcart://payment-cancel}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost:19006}
+      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-true}
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: trinity_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
     ports:
-      - "3000:3000"
+      - "8080:80"
+      - "3443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
 
   tests:
     image: node:20-alpine

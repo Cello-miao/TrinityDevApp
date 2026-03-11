@@ -14,10 +14,23 @@ const orderRoutes = require("./routes/order.routes");
 const openfoodfactsRoutes = require("./routes/openfoodfacts.routes");
 const paypalRoutes = require("./routes/paypal.routes");
 
-// Configure CORS to allow all origins
+const isProduction = process.env.NODE_ENV === "production";
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
+// Use strict CORS in production and permissive CORS during local development.
 app.use(
   cors({
-    origin: "*",
+    origin:
+      isProduction && corsOrigins.length > 0
+        ? corsOrigins
+        : "*",
     credentials: false,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -25,6 +38,30 @@ app.use(
 );
 
 app.use(express.json());
+
+// Reject insecure transport in production unless explicitly disabled.
+app.use((req, res, next) => {
+  if (!isProduction) {
+    return next();
+  }
+
+  const allowInsecure = process.env.ALLOW_INSECURE_HTTP === "true";
+  if (allowInsecure) {
+    return next();
+  }
+
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const isHttps = req.secure || forwardedProto === "https";
+
+  if (isHttps) {
+    return next();
+  }
+
+  return res.status(426).json({
+    message: "HTTPS is required in production.",
+    code: "HTTPS_REQUIRED",
+  });
+});
 
 // Logging middleware - log all requests
 app.use((req, res, next) => {
@@ -59,6 +96,10 @@ pool.query("SELECT NOW()", (err, res) => {
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
-  console.log(`Android emulator API base: http://10.0.2.2:${PORT}/api`);
+  const protocol = isProduction ? "https" : "http";
+  console.log(`Server running on ${protocol}://${HOST}:${PORT}`);
+  if (!isProduction) {
+    console.log("Nginx HTTPS API base: https://localhost:3443/api");
+    console.log("Android emulator HTTPS API base: https://10.0.2.2:3443/api");
+  }
 });

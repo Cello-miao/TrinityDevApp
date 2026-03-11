@@ -8,10 +8,9 @@ import {
   ScrollView,
   Image,
   SafeAreaView,
-  Alert,
   Modal,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +19,8 @@ import { Product } from '../types';
 import { productAPI } from '../lib/api';
 import { fetchProductByBarcode, searchProducts } from '../lib/openfoodfacts';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 const AUTO_FETCH_AFTER_SCAN_KEY = 'admin_auto_fetch_after_scan';
 const ADMIN_SCAN_AUTO_FILL_AND_EXIT_KEY = 'admin_scan_auto_fill_and_exit';
@@ -110,7 +111,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       setProducts(data);
     } catch (error) {
       console.error('Failed to load products:', error);
-      Alert.alert('Error', 'Failed to load products');
+      showAppAlert('Error', 'Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -136,7 +137,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
   };
 
   const handleDelete = async (product: Product) => {
-    Alert.alert(
+    showAppAlert(
       'Delete Product',
       `Are you sure you want to delete ${product.name}?`,
       [
@@ -147,11 +148,11 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
           onPress: async () => {
             try {
               await productAPI.deleteProduct(product.id);
-              Alert.alert('Success', 'Product deleted successfully');
+              showAppAlert('Success', 'Product deleted successfully');
               loadProducts(); // Reload products
             } catch (error) {
               console.error('Failed to delete product:', error);
-              Alert.alert('Error', 'Failed to delete product');
+              showAppAlert('Error', 'Failed to delete product');
             }
           },
         },
@@ -180,7 +181,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
   const fetchBarcodeData = async (barcode: string) => {
     if (!barcode) {
-      Alert.alert('Error', 'Please enter a barcode first');
+      showAppAlert('Error', 'Please enter a barcode first');
       return;
     }
 
@@ -206,12 +207,12 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
             category: fetchedCategory,
           };
         });
-        Alert.alert('Success', 'Product data fetched from OpenFoodFacts');
+        showAppAlert('Success', 'Product data fetched from OpenFoodFacts');
       } else {
-        Alert.alert('Not Found', 'Product not found in OpenFoodFacts database');
+        showAppAlert('Not Found', 'Product not found in OpenFoodFacts database');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch product data');
+      showAppAlert('Error', 'Failed to fetch product data');
     } finally {
       setIsFetchingBarcode(false);
     }
@@ -236,7 +237,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permissionResult.granted === false) {
-        Alert.alert('Permission Required', 'You need to allow access to your photos to upload an image.');
+        showAppAlert('Permission Required', 'You need to allow access to your photos to upload an image.');
         return;
       }
 
@@ -254,13 +255,13 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      showAppAlert('Error', 'Failed to pick image');
     }
   };
 
   const handleSaveProduct = async () => {
     if (!newProduct.name || !newProduct.price) {
-      Alert.alert('Error', 'Name and price are required');
+      showAppAlert('Error', 'Name and price are required');
       return;
     }
 
@@ -274,7 +275,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       });
 
       if (duplicate) {
-        Alert.alert('Duplicate Barcode', 'A product with this barcode already exists. Please use a different barcode.');
+        showAppAlert('Duplicate Barcode', 'A product with this barcode already exists. Please use a different barcode.');
         return;
       }
     }
@@ -293,10 +294,10 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
       if (editingProductId) {
         await productAPI.updateProduct(editingProductId, productData);
-        Alert.alert('Success', 'Product updated successfully');
+        showAppAlert('Success', 'Product updated successfully');
       } else {
         await productAPI.createProduct(productData);
-        Alert.alert('Success', 'Product added successfully');
+        showAppAlert('Success', 'Product added successfully');
       }
       
       setIsAddModalVisible(false);
@@ -314,7 +315,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     } catch (error) {
       console.error('Failed to save product:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save product';
-      Alert.alert('Error', errorMessage);
+      showAppAlert('Error', errorMessage);
     } finally {
       setIsSavingProduct(false);
     }
@@ -322,7 +323,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
   const handleSearchImport = async () => {
     if (!importQuery) {
-      Alert.alert('Error', 'Please enter a search query');
+      showAppAlert('Error', 'Please enter a search query');
       return;
     }
 
@@ -331,11 +332,11 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       const results = await searchProducts(importQuery, importType);
       setImportResults(results);
       if (results.length === 0) {
-        Alert.alert('Not Found', 'No products found matching your query');
+        showAppAlert('Not Found', 'No products found matching your query');
       }
     } catch (error) {
       console.error('Failed to search products:', error);
-      Alert.alert('Error', 'Failed to search products');
+      showAppAlert('Error', 'Failed to search products');
     } finally {
       setIsSearchingImport(false);
     }
@@ -363,11 +364,11 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       };
 
       await productAPI.createProduct(productData);
-      Alert.alert('Success', `${productData.name} imported successfully`);
+      showAppAlert('Success', `${productData.name} imported successfully`);
       loadProducts();
     } catch (error) {
       console.error('Failed to import product:', error);
-      Alert.alert('Error', 'Failed to import product');
+      showAppAlert('Error', 'Failed to import product');
     } finally {
       setIsImporting(false);
     }

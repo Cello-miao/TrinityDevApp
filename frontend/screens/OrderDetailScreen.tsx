@@ -25,8 +25,10 @@ export default function OrderDetailScreen({ navigation, route }: OrderDetailScre
   const theme = useTheme();
   const styles = createStyles(theme);
   const { order } = route.params;
+  const SHIPPING_FEE = 5.0;
   
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = Math.max(order.total - SHIPPING_FEE, 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -125,17 +127,17 @@ export default function OrderDetailScreen({ navigation, route }: OrderDetailScre
           
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal ({itemCount} items)</Text>
-            <Text style={styles.summaryValue}>€{order.total.toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
           </View>
           
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping Fee</Text>
-            <Text style={styles.summaryValue}>€0.00</Text>
+            <Text style={styles.summaryValue}>€{SHIPPING_FEE.toFixed(2)}</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Tax</Text>
-            <Text style={styles.summaryValue}>€0.00</Text>
+            <Text style={styles.summaryLabel}>Tax (5.5%)</Text>
+            <Text style={styles.summaryIncludedValue}>Included</Text>
           </View>
 
           <View style={styles.divider} />
@@ -324,6 +326,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: theme.text,
+  },
+  summaryIncludedValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.success,
   },
   divider: {
     height: 1,

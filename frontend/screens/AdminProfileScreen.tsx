@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
-  Switch,
-} from 'react-native';
+  Switch
+} from "react-native";
+import { showAppAlert } from '../lib/styledAlert';
+
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout } from '../lib/auth';
@@ -53,7 +54,7 @@ export default function AdminProfileScreen({ navigation }: any) {
       await AsyncStorage.setItem(AUTO_FETCH_AFTER_SCAN_KEY, String(value));
     } catch (error) {
       console.error('Failed to save auto-fetch setting:', error);
-      Alert.alert('Error', 'Failed to save setting');
+      showAppAlert('Error', 'Failed to save setting');
     }
   };
 
@@ -73,7 +74,7 @@ export default function AdminProfileScreen({ navigation }: any) {
       await AsyncStorage.setItem(ADMIN_SCAN_AUTO_FILL_AND_EXIT_KEY, String(value));
     } catch (error) {
       console.error('Failed to save admin scan setting:', error);
-      Alert.alert('Error', 'Failed to save setting');
+      showAppAlert('Error', 'Failed to save setting');
     }
   };
 
@@ -84,14 +85,14 @@ export default function AdminProfileScreen({ navigation }: any) {
       setUser(profileData);
     } catch (error) {
       console.error('Failed to load profile:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      showAppAlert('Error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
+    showAppAlert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',

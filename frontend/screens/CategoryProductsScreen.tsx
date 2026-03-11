@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  SafeAreaView,
-} from 'react-native';
+  SafeAreaView
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types';
 import { productAPI, cartAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
-import { Alert } from 'react-native';
+import { showAppAlert } from '../lib/styledAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -37,7 +37,7 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
       setProducts(filtered.length > 0 ? filtered : data);
     } catch (error) {
       console.error('Failed to load products:', error);
-      Alert.alert('Error', 'Failed to load products');
+      showAppAlert('Error', 'Failed to load products');
     } finally {
       setLoading(false);
     }

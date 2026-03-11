@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +25,7 @@ export default function AdminOrdersScreen({ navigation }: any) {
   const styles = createStyles(theme);
   const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -33,11 +35,14 @@ export default function AdminOrdersScreen({ navigation }: any) {
 
   const loadOrders = async () => {
     try {
+      setLoading(true);
       const allOrders = await orderAPI.getAllOrders();
       setOrders(allOrders as OrderWithCustomer[]);
     } catch (error) {
       console.error('Failed to load orders:', error);
       setOrders([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,14 +101,33 @@ export default function AdminOrdersScreen({ navigation }: any) {
         </View>
 
         {/* Orders List */}
+        {loading && (
+          <View style={styles.centerState}>
+            <ActivityIndicator color={theme.primary} />
+            <Text style={styles.stateText}>Loading orders...</Text>
+          </View>
+        )}
+
+        {!loading && filteredOrders.length === 0 && (
+          <View style={styles.centerState}>
+            <Ionicons name="receipt-outline" size={36} color={theme.textTertiary} />
+            <Text style={styles.stateText}>No matching orders</Text>
+          </View>
+        )}
+
         {filteredOrders.map((order, index) => {
           const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
           
           return (
-            <View key={`order-${index}-${order.id}`} style={styles.orderCard}>
+            <TouchableOpacity
+              key={`order-${index}-${order.id}`}
+              style={styles.orderCard}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('OrderDetail', { order })}
+            >
               <View style={styles.orderHeader}>
                 <View style={styles.orderHeaderLeft}>
-                  <Text style={styles.orderId}>#ORD-{order.id.slice(0, 3)}</Text>
+                  <Text style={styles.orderId}>#{order.id}</Text>
                   <View style={[
                     styles.statusBadge,
                     { backgroundColor: getStatusColor(order.status) }
@@ -130,7 +154,12 @@ export default function AdminOrdersScreen({ navigation }: any) {
                 <Text style={styles.customerName}>{order.customerName}</Text>
                 <Text style={styles.customerEmail}>{order.customerEmail}</Text>
               </View>
-            </View>
+
+              <View style={styles.viewDetailsRow}>
+                <Text style={styles.viewDetailsText}>View details</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+              </View>
+            </TouchableOpacity>
           );
         })}
 
@@ -219,6 +248,21 @@ const createStyles = (theme: any) => StyleSheet.create({
   customerInfo: {
     marginTop: 4,
   },
+  viewDetailsRow: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 2,
+  },
+  viewDetailsText: {
+    color: theme.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   customerName: {
     fontSize: 15,
     fontWeight: '600',
@@ -228,5 +272,20 @@ const createStyles = (theme: any) => StyleSheet.create({
   customerEmail: {
     fontSize: 13,
     color: theme.textSecondary,
+  },
+  centerState: {
+    marginTop: 24,
+    marginHorizontal: 16,
+    backgroundColor: theme.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingVertical: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  stateText: {
+    color: theme.textSecondary,
+    fontSize: 14,
   },
 });

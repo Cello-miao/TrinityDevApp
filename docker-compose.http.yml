@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: trinity_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${DOCKERHUB_USERNAME}/trinitydevapp-backend:${IMAGE_TAG:-latest}
+    container_name: trinity_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT:-5432}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3000
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-https://example.com/payment-success}
+      PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-https://example.com/payment-cancel}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-true}
+    ports:
+      - "80:3000"
+
+volumes:
+  postgres_data:

@@ -4,8 +4,9 @@ import { NativeModules, Platform } from 'react-native';
 import { Order, Product, User } from '../types';
 
 // Configure API base URL - adjust according to your environment
-// For Android emulator: use 10.0.2.2 to access host localhost
-// For iOS simulator/device: use your computer's IP address
+// HTTPS is served by local Nginx on port 3443.
+// For Android emulator: use 10.0.2.2 to access host localhost.
+// For iOS simulator/device: use your computer's IP address.
 const getApiBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
     return process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -14,21 +15,21 @@ const getApiBaseUrl = (): string => {
   const hostUri = Constants.expoConfig?.hostUri;
   const hostFromExpo = hostUri?.split(':')[0];
   if (hostFromExpo) {
-    return `http://${hostFromExpo}:3000/api`;
+    return `https://${hostFromExpo}:3443/api`;
   }
 
   const scriptURL = NativeModules.SourceCode?.scriptURL as string | undefined;
   const hostMatch = scriptURL?.match(/^(?:https?|exp):\/\/([^/:]+)(?::\d+)?/);
 
   if (hostMatch?.[1]) {
-    return `http://${hostMatch[1]}:3000/api`;
+    return `https://${hostMatch[1]}:3443/api`;
   }
 
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:3000/api';
+    return 'https://10.0.2.2:3443/api';
   }
 
-  return 'http://localhost:3000/api';
+  return 'https://localhost:3443/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

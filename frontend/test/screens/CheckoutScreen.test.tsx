@@ -39,7 +39,7 @@ jest.mock('react-native', () => {
 const { Alert, Linking } = require('react-native');
 
 jest.mock('../../lib/api', () => ({
-  API_BASE_URL: 'http://localhost:3000/api',
+  API_BASE_URL: 'https://localhost:3443/api',
   orderAPI: {
     createOrder: jest.fn(),
   },
@@ -53,6 +53,15 @@ jest.mock(
   'expo-web-browser',
   () => ({
     openAuthSessionAsync: jest.fn(),
+  }),
+  { virtual: true },
+);
+
+jest.mock(
+  'expo-linking',
+  () => ({
+    createURL: jest.fn((path: string) => `freshcart://${path}`),
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   }),
   { virtual: true },
 );

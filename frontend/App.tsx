@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme, useThemeMode } from './lib/theme';
+import {
+  StyledAlertHost,
+  installStyledAlert,
+  uninstallStyledAlert,
+} from './lib/styledAlert';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
@@ -156,6 +161,14 @@ function AdminTabs() {
 
 function AppContent() {
   const { isDark } = useThemeMode();
+
+  useEffect(() => {
+    installStyledAlert();
+    return () => {
+      uninstallStyledAlert();
+    };
+  }, []);
+
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -232,6 +245,7 @@ function AppContent() {
           />
         </Stack.Navigator>
       </NavigationContainer>
+      <StyledAlertHost />
     </>
   );
 }

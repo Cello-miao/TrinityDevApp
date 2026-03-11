@@ -4,9 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
-  Animated,
-} from 'react-native';
+  Animated
+} from "react-native";
+import { showAppAlert } from '../lib/styledAlert';
+
 import { CameraView, Camera } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,7 +80,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
     const barcode = typeof data === 'string' ? data.trim() : '';
 
     if (!barcode || barcode.length < 4) {
-      Alert.alert(
+      showAppAlert(
         'Unreadable Barcode',
         'The barcode could not be read. Please align it and try again.',
         [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
@@ -130,7 +131,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
           return;
         }
 
-        Alert.alert(
+        showAppAlert(
           'Product Found',
           `${product.name}`,
           [
@@ -148,7 +149,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
           ]
         );
       } else {
-        Alert.alert(
+        showAppAlert(
           'Product Not Found',
           `Barcode: ${barcode}`,
           [
@@ -165,7 +166,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
       const errorMessage = error instanceof Error ? error.message : '';
 
       if (errorMessage.includes('No product found')) {
-        Alert.alert(
+        showAppAlert(
           'Product Not Found',
           `No product found for barcode: ${barcode}`,
           [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
@@ -174,7 +175,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
       }
 
       if (errorMessage.includes('Invalid barcode')) {
-        Alert.alert(
+        showAppAlert(
           'Unreadable Barcode',
           'The barcode format is invalid. Please try again.',
           [{ text: 'Continue Scanning', onPress: () => setScanned(false) }],
@@ -182,7 +183,7 @@ export default function BarcodeScannerScreen({ navigation, route }: any) {
         return;
       }
 
-      Alert.alert(
+      showAppAlert(
         'Error',
         'Failed to find product',
         [

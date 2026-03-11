@@ -7,9 +7,15 @@ npm-debug.*
 *.p8
 *.p12
 *.key
+*.crt
+*.cer
+*.csr
+*.srl
+*.pem
 *.mobileprovision
 *.orig.*
 web-build/
+nginx/certs/*.cnf
 
 # macOS
 .DS_Store

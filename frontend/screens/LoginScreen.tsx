@@ -7,12 +7,13 @@ import {
   StyleSheet,
   Image,
   KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+  Platform
+} from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login } from '../lib/auth';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 export default function LoginScreen({ navigation }: any) {
   const theme = useTheme();
@@ -34,7 +35,7 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAppAlert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -46,7 +47,7 @@ export default function LoginScreen({ navigation }: any) {
         navigation.replace('Main');
       }
     } else {
-      Alert.alert('Error', 'Login failed, please check your credentials');
+      showAppAlert('Error', 'Login failed, please check your credentials');
     }
   };
 

@@ -45,7 +45,8 @@
       ],
       "expo-asset",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withAndroidNetworkSecurity"
     ]
   }
 }

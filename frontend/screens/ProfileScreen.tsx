@@ -5,15 +5,16 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   SafeAreaView,
   Switch,
   Modal,
   Pressable,
   Dimensions,
   Platform,
-  StatusBar,
-} from 'react-native';
+  StatusBar
+} from "react-native";
+import { showAppAlert } from '../lib/styledAlert';
+
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
@@ -107,12 +108,12 @@ export default function ProfileScreen({ navigation }: any) {
       await AsyncStorage.setItem(USER_SCAN_AUTO_OPEN_DETAIL_KEY, String(value));
     } catch (error) {
       console.error('Failed to save scanner preference:', error);
-      Alert.alert('Error', 'Failed to save setting');
+      showAppAlert('Error', 'Failed to save setting');
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
+    showAppAlert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',

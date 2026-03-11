@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   SafeAreaView,
   ActivityIndicator,
   Platform,
@@ -16,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { orderAPI, userAPI, API_BASE_URL } from "../lib/api";
 import { CartItem, User } from "../types";
 import { useTheme } from "../lib/theme";
+import { showAppAlert } from "../lib/styledAlert";
 
 let PayPalScriptProvider: any = null;
 let PayPalButtons: any = null;
@@ -94,31 +94,31 @@ export default function CheckoutScreen({ route, navigation }: any) {
 
   const validateForm = () => {
     if (!firstName.trim()) {
-      Alert.alert("Validation Error", "Please enter your first name");
+      showAppAlert("Validation Error", "Please enter your first name");
       return false;
     }
     if (!lastName.trim()) {
-      Alert.alert("Validation Error", "Please enter your last name");
+      showAppAlert("Validation Error", "Please enter your last name");
       return false;
     }
     if (!email.trim() || !email.includes("@")) {
-      Alert.alert("Validation Error", "Please enter a valid email address");
+      showAppAlert("Validation Error", "Please enter a valid email address");
       return false;
     }
     if (!streetAddress.trim()) {
-      Alert.alert("Validation Error", "Please enter your street address");
+      showAppAlert("Validation Error", "Please enter your street address");
       return false;
     }
     if (!postalCode.trim()) {
-      Alert.alert("Validation Error", "Please enter your postal code");
+      showAppAlert("Validation Error", "Please enter your postal code");
       return false;
     }
     if (!city.trim()) {
-      Alert.alert("Validation Error", "Please enter your city");
+      showAppAlert("Validation Error", "Please enter your city");
       return false;
     }
     if (!paymentMethod) {
-      Alert.alert("Validation Error", "Please select a payment method");
+      showAppAlert("Validation Error", "Please select a payment method");
       return false;
     }
     return true;
@@ -162,7 +162,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
       const orderLabel =
         orderResponse?.order?.order_number || orderResponse?.order?.id || "N/A";
 
-      Alert.alert(
+      showAppAlert(
         "Order Successful!",
         `Your order #${orderLabel} has been placed successfully!\n\nPayment Method: ${method}\nTotal: €${orderTotal.toFixed(2)}`,
         [
@@ -175,7 +175,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
     } catch (error) {
       console.error("Failed to create order:", error);
       setIsProcessing(false);
-      Alert.alert("Error", "Failed to place order, please try again");
+      showAppAlert("Error", "Failed to place order, please try again");
     }
   };
 
@@ -193,11 +193,48 @@ export default function CheckoutScreen({ route, navigation }: any) {
     return await captureResponse.json();
   };
 
+  const finalizePayPalOrder = async (orderId: string) => {
+    const captureData = await capturePayPalOrder(orderId);
+    if (captureData.status === "COMPLETED") {
+      await completeOrder("PayPal");
+      return true;
+    }
+    return false;
+  };
+
+  const wait = (ms: number) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  const retryFinalizePayPalOrder = async (
+    orderId: string,
+    attempts = 6,
+    delayMs = 1500,
+  ) => {
+    for (let i = 0; i < attempts; i += 1) {
+      const ok = await finalizePayPalOrder(orderId);
+      if (ok) {
+        return true;
+      }
+      if (i < attempts - 1) {
+        await wait(delayMs);
+      }
+    }
+    return false;
+  };
+
   const processMobilePayPal = async () => {
     try {
       setIsProcessing(true);
       const token = await AsyncStorage.getItem("token");
       const baseUrl = API_BASE_URL.replace("/api", "");
+      const { createURL, addEventListener } = require("expo-linking");
+
+      // In Expo Go, createURL generates an exp:// callback URL that can return
+      // to the app correctly. In native builds, it uses the configured scheme.
+      const returnUrl = createURL("payment-success");
+      const cancelUrl = createURL("payment-cancel");
 
       const createResponse = await fetch(`${baseUrl}/api/paypal/create-order`, {
         method: "POST",
@@ -205,72 +242,84 @@ export default function CheckoutScreen({ route, navigation }: any) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ amount: orderTotal }),
+        body: JSON.stringify({
+          amount: orderTotal,
+          returnUrl,
+          cancelUrl,
+        }),
       });
 
       const { orderId, approvalUrl } = await createResponse.json();
 
       if (!approvalUrl) {
-        Alert.alert("Error", "Failed to create PayPal order");
+        showAppAlert("Error", "Failed to create PayPal order");
         setIsProcessing(false);
         return;
       }
 
-      const { openAuthSessionAsync } = require("expo-web-browser");
-      let ExpoLinking: any = null;
-      try {
-        ExpoLinking = require("expo-linking");
-      } catch (e) {
-        ExpoLinking = null;
-      }
+      const { openAuthSessionAsync, warmUpAsync, coolDownAsync } =
+        require("expo-web-browser");
 
       let handled = false;
 
-      const subscription = ExpoLinking?.addEventListener?.(
+      const finalizeFromCapture = async () => await finalizePayPalOrder(orderId);
+
+      const subscription = addEventListener?.(
         "url",
         async ({ url }: { url: string }) => {
           if (handled) return;
           subscription?.remove?.();
           handled = true;
           if (url.includes("payment-success")) {
-            const captureData = await capturePayPalOrder(orderId);
-            if (captureData.status === "COMPLETED") {
-              await completeOrder("PayPal");
-            } else {
-              Alert.alert("Payment Failed", "PayPal payment was not completed");
+            const ok = await finalizeFromCapture();
+            if (!ok) {
+              showAppAlert("Payment Failed", "PayPal payment was not completed");
               setIsProcessing(false);
             }
           } else {
-            Alert.alert("Cancelled", "PayPal payment was cancelled");
+            showAppAlert("Cancelled", "PayPal payment was cancelled");
             setIsProcessing(false);
           }
         },
       );
 
-      const result = await openAuthSessionAsync(
-        approvalUrl,
-        "freshcart://payment-success",
-      );
+      await warmUpAsync?.();
+      const result = await openAuthSessionAsync(approvalUrl, returnUrl);
+      await coolDownAsync?.();
 
       if (!handled) {
         subscription?.remove?.();
-        if (result.type === "success") {
+        if (
+          result.type === "success" &&
+          typeof result.url === "string" &&
+          result.url.includes("payment-success")
+        ) {
           handled = true;
-          const captureData = await capturePayPalOrder(orderId);
-          if (captureData.status === "COMPLETED") {
-            await completeOrder("PayPal");
-          } else {
-            Alert.alert("Payment Failed", "PayPal payment was not completed");
+          const ok = await finalizeFromCapture();
+          if (!ok) {
+            showAppAlert("Payment Failed", "PayPal payment was not completed");
             setIsProcessing(false);
           }
         } else {
-          Alert.alert("Cancelled", "PayPal payment was cancelled");
-          setIsProcessing(false);
+          // Fallback for Expo Go/Android devices where PayPal cannot deep-link
+          // back reliably: after user dismisses browser manually, retry capture.
+          showAppAlert(
+            "Confirming Payment",
+            "We are confirming your PayPal payment. If PayPal keeps spinning, press back once and wait a few seconds.",
+          );
+          const ok = await retryFinalizePayPalOrder(orderId);
+          if (!ok) {
+            showAppAlert(
+              "Payment Pending",
+              "PayPal confirmation is delayed. Please return to Orders and refresh in a few seconds.",
+            );
+            setIsProcessing(false);
+          }
         }
       }
     } catch (error) {
       console.error("PayPal payment error", error);
-      Alert.alert("Payment Error", "Failed to process PayPal payment");
+      showAppAlert("Payment Error", "Failed to process PayPal payment");
       setIsProcessing(false);
     }
   };
@@ -280,7 +329,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
     if (paymentMethod === "paypal" && Platform.OS !== "web") {
       await processMobilePayPal();
     } else if (paymentMethod === "card") {
-      Alert.alert(
+      showAppAlert(
         "Card Payment",
         "Card payment integration coming soon. Please use PayPal",
         [{ text: "OK" }],
@@ -331,12 +380,12 @@ export default function CheckoutScreen({ route, navigation }: any) {
             if (captureData.status === "COMPLETED") {
               await completeOrder("PayPal");
             } else {
-              Alert.alert("Payment Failed", "PayPal payment was not completed");
+              showAppAlert("Payment Failed", "PayPal payment was not completed");
             }
           }}
           onError={(err: any) => {
             console.error("PayPal error", err);
-            Alert.alert("PayPal Error", "Something went wrong with PayPal");
+            showAppAlert("PayPal Error", "Something went wrong with PayPal");
           }}
         />
       </PayPalScriptProvider>
@@ -810,3 +859,4 @@ const createStyles = (theme: any) =>
       textAlign: "center",
     },
   });
+

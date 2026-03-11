@@ -6,14 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   SafeAreaView,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { userAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 export default function EditProfileScreen({ route, navigation }: any) {
   const theme = useTheme();
@@ -32,7 +33,7 @@ export default function EditProfileScreen({ route, navigation }: any) {
   const handleSave = async () => {
     // Basic validation
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your first and last name');
+      showAppAlert('Validation Error', 'Please enter your first and last name');
       return;
     }
 
@@ -48,7 +49,7 @@ export default function EditProfileScreen({ route, navigation }: any) {
         billing_country: country.trim(),
       });
 
-      Alert.alert(
+      showAppAlert(
         'Success',
         'Your profile has been updated successfully!',
         [
@@ -60,7 +61,7 @@ export default function EditProfileScreen({ route, navigation }: any) {
       );
     } catch (error: any) {
       console.error('Failed to update profile:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile, please try again');
+      showAppAlert('Error', error.message || 'Failed to update profile, please try again');
     } finally {
       setLoading(false);
     }

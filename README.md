@@ -48,12 +48,22 @@ npm run docker:up
 npm run docker:logs
 ```
 
+### 2.1) Create local TLS certificate for Nginx (dev HTTPS)
+
+Install `mkcert` once, then run at repo root:
+
+```bash
+mkcert -key-file nginx/certs/dev.key -cert-file nginx/certs/dev.crt localhost 127.0.0.1 ::1 10.0.2.2 <YOUR_PC_IP>
+```
+
+If certificate files are missing, the `nginx` container will fail to start.
+
 ### 3) Start Expo app (Android emulator)
 
 In another terminal at repo root:
 
 ```bash
-set EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000/api
+set EXPO_PUBLIC_API_BASE_URL=https://10.0.2.2:3443/api
 npm run start
 ```
 
@@ -64,7 +74,7 @@ Then press `a` in Metro to open Android.
 Set API URL to your computer LAN IP (same Wi-Fi as phone):
 
 ```bash
-set EXPO_PUBLIC_API_BASE_URL=http://<YOUR_PC_IP>:3000/api
+set EXPO_PUBLIC_API_BASE_URL=https://<YOUR_PC_IP>:3443/api
 npm run start -- --clear
 ```
 
@@ -83,7 +93,11 @@ npm run docker:down
 Notes:
 - DB schema auto-initializes from `database/schema.sql` on first startup.
 - To fully reset DB data: `docker compose down -v` then `npm run docker:up`.
+- HTTPS gateway runs at `https://localhost:3443` via Nginx.
+- Backend `3000` is internal-only in Docker and is not exposed to host.
+- Database `5432` is internal-only in Docker and is not exposed to host.
 - `10.0.2.2` works for Android emulator only; real devices must use your computer IP.
+- You must trust the local certificate on emulator/device for HTTPS requests to succeed.
 
 ## Scanner Backend APIs
 

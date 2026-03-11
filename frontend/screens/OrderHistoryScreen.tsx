@@ -6,14 +6,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  SafeAreaView,
-  Alert,
-} from 'react-native';
+  SafeAreaView
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { Order } from '../types';
 import { useFocusEffect } from '@react-navigation/native';
 import { orderAPI, cartAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 export default function OrderHistoryScreen({ navigation }: any) {
   const theme = useTheme();
@@ -75,7 +76,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       });
       
       if (validItems.length === 0) {
-        Alert.alert(
+        showAppAlert(
           'Cannot Buy Again',
           'All products in this order are no longer available.'
         );
@@ -108,7 +109,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       console.log(`Results: ${successCount} success, ${failedItems.length} failed`);
       
       if (successCount === 0) {
-        Alert.alert(
+        showAppAlert(
           'Error',
           'Failed to add items to cart. These products may no longer be available.'
         );
@@ -116,7 +117,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
       }
       
       if (failedItems.length > 0) {
-        Alert.alert(
+        showAppAlert(
           'Partial Success',
           `Added ${successCount} items to cart. Failed to add: ${failedItems.join(', ')}`,
           [
@@ -128,7 +129,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
           ]
         );
       } else {
-        Alert.alert(
+        showAppAlert(
           'Success',
           `All ${successCount} items have been added to your cart!`,
           [
@@ -143,7 +144,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
     } catch (error: any) {
       console.error('Buy again error:', error);
       console.error('Error stack:', error.stack);
-      Alert.alert(
+      showAppAlert(
         'Error',
         `Failed: ${error.message || 'Unknown error'}. Check console for details.`
       );

@@ -6,13 +6,14 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
-  Alert,
-} from 'react-native';
+  SafeAreaView
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { userAPI, orderAPI } from '../lib/api';
 import { User, Order } from '../types';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 interface Customer {
   id: string;
@@ -68,7 +69,7 @@ export default function AdminCustomersScreen({ navigation }: any) {
       setCustomers(customersWithOrders);
     } catch (error) {
       console.error('Failed to load customers:', error);
-      Alert.alert('Error', 'Failed to load customers');
+      showAppAlert('Error', 'Failed to load customers');
     } finally {
       setLoading(false);
     }
@@ -144,11 +145,7 @@ export default function AdminCustomersScreen({ navigation }: any) {
                     key={`${customer.id}-${order.id}-${index}`} 
                     style={styles.orderItem}
                     onPress={() => {
-                      Alert.alert(
-                        'Order Details',
-                        `Order ID: ${order.id}\nDate: ${new Date(order.createdAt).toLocaleDateString()}\nTotal: €${order.total.toFixed(2)}\nStatus: ${order.status}\nItems: ${order.items.length}\nPayment: ${order.paymentMethod}\nAddress: ${order.deliveryAddress}`,
-                        [{ text: 'OK' }]
-                      );
+                      navigation.navigate('OrderDetail', { order });
                     }}
                   >
                     <View style={styles.orderLeft}>

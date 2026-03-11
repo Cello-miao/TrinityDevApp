@@ -7,12 +7,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator
+} from "react-native";
 import { register } from '../lib/auth';
 import { useTheme } from '../lib/theme';
+import { showAppAlert } from '../lib/styledAlert';
+
 
 export default function RegisterScreen({ navigation }: any) {
   const theme = useTheme();
@@ -30,13 +31,13 @@ export default function RegisterScreen({ navigation }: any) {
     
     if (!name || !email || !phone || !password || !confirmPassword) {
       console.log('Validation failed: missing fields');
-      Alert.alert('Error', 'Please fill in all fields');
+      showAppAlert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
       console.log('Validation failed: passwords do not match');
-      Alert.alert('Error', 'Passwords do not match');
+      showAppAlert('Error', 'Passwords do not match');
       return;
     }
 
@@ -48,15 +49,15 @@ export default function RegisterScreen({ navigation }: any) {
       console.log('Registration result:', user);
       
       if (user) {
-        Alert.alert('Success', 'Registration successful!', [
+        showAppAlert('Success', 'Registration successful!', [
           { text: 'OK', onPress: () => navigation.replace('Main') },
         ]);
       } else {
-        Alert.alert('Error', 'Registration failed, please try again');
+        showAppAlert('Error', 'Registration failed, please try again');
       }
     } catch (error) {
       console.error('Registration exception:', error);
-      Alert.alert('Error', 'An error occurred during registration');
+      showAppAlert('Error', 'An error occurred during registration');
     } finally {
       setLoading(false);
     }
