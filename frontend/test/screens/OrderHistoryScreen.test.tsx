@@ -126,7 +126,7 @@ describe('OrderHistoryScreen', () => {
 
     expect(queryByText('Order Items')).toBeNull();
 
-    fireEvent.press(getByText('ORD-zzz'));
+    fireEvent.press(getByText('#zzz999'));
 
     await waitFor(() => {
       expect(getByText('Order Items')).toBeTruthy();
