@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { repairTextEncodingDeep } = require("../utils/textEncoding");
 
 router.get("/search", async (req, res) => {
   try {
@@ -19,7 +20,7 @@ router.get("/search", async (req, res) => {
     });
 
     const data = await response.json();
-    res.json(data.products || []);
+    res.json(repairTextEncodingDeep(data.products || []));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -37,7 +38,7 @@ router.get("/barcode/:barcode", async (req, res) => {
     );
 
     const data = await response.json();
-    res.json(data);
+    res.json(repairTextEncodingDeep(data));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,4 +1,16 @@
 const pool = require("../config/db");
+const { repairTextEncodingDeep } = require("../utils/textEncoding");
+
+/**
+ * Product controller
+ *
+ * Note: incoming product fields may originate from external sources
+ * (OpenFoodFacts). To protect UI and DB from mojibake caused by
+ * misconfigured deployment pipelines, we apply a conservative
+ * encoding repair to textual fields both at write-time and
+ * read-time. The repair is non-destructive and favors the original
+ * value when uncertainty exists.
+ */
 
 const normalizeBarcode = (barcode) => {
   if (barcode === undefined || barcode === null) {
@@ -10,7 +22,7 @@ const normalizeBarcode = (barcode) => {
 const getAllProducts = async (req, res) => {
   try {
     const products = await pool.query("SELECT * FROM products");
-    res.status(200).json(products.rows);
+    res.status(200).json(repairTextEncodingDeep(products.rows));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -25,7 +37,7 @@ const getProductById = async (req, res) => {
     if (product.rows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.status(200).json(product.rows[0]);
+    res.status(200).json(repairTextEncodingDeep(product.rows[0]));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -46,6 +58,16 @@ const createProduct = async (req, res) => {
       quantity,
     } = req.body;
 
+    const sanitizedProduct = repairTextEncodingDeep({
+      name,
+      description,
+      brand,
+      picture,
+      category,
+      nutrition_grade,
+      nutritional_info,
+    });
+
     const normalizedBarcode = normalizeBarcode(barcode);
     if (normalizedBarcode) {
       const existing = await pool.query(
@@ -65,19 +87,19 @@ const createProduct = async (req, res) => {
       `INSERT INTO products (name, price, description, brand, picture, category, barcode, nutrition_grade, nutritional_info, quantity)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
-        name,
+        sanitizedProduct.name,
         price,
-        description,
-        brand,
-        picture,
-        category,
+        sanitizedProduct.description,
+        sanitizedProduct.brand,
+        sanitizedProduct.picture,
+        sanitizedProduct.category,
         normalizedBarcode,
-        nutrition_grade,
-        nutritional_info,
+        sanitizedProduct.nutrition_grade,
+        sanitizedProduct.nutritional_info,
         quantity,
       ],
     );
-    res.status(201).json(newProduct.rows[0]);
+    res.status(201).json(repairTextEncodingDeep(newProduct.rows[0]));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -99,6 +121,16 @@ const updateProduct = async (req, res) => {
       quantity,
     } = req.body;
 
+    const sanitizedProduct = repairTextEncodingDeep({
+      name,
+      description,
+      brand,
+      picture,
+      category,
+      nutrition_grade,
+      nutritional_info,
+    });
+
     const normalizedBarcode = normalizeBarcode(barcode);
     if (normalizedBarcode) {
       const existing = await pool.query(
@@ -119,15 +151,15 @@ const updateProduct = async (req, res) => {
       category=$6, barcode=$7, nutrition_grade=$8, nutritional_info=$9, quantity=$10,
       updated_at=CURRENT_TIMESTAMP WHERE id=$11 RETURNING *`,
       [
-        name,
+        sanitizedProduct.name,
         price,
-        description,
-        brand,
-        picture,
-        category,
+        sanitizedProduct.description,
+        sanitizedProduct.brand,
+        sanitizedProduct.picture,
+        sanitizedProduct.category,
         normalizedBarcode,
-        nutrition_grade,
-        nutritional_info,
+        sanitizedProduct.nutrition_grade,
+        sanitizedProduct.nutritional_info,
         quantity,
         id,
       ],
@@ -135,7 +167,7 @@ const updateProduct = async (req, res) => {
     if (updatedProduct.rows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.status(200).json(updatedProduct.rows[0]);
+    res.status(200).json(repairTextEncodingDeep(updatedProduct.rows[0]));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
