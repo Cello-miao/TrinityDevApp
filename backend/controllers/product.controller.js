@@ -157,10 +157,126 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const getRecommendedProducts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 6;
+
+    // Get products from user's purchase history with purchase count
+    const purchaseHistory = await pool.query(
+      `SELECT p.*, COUNT(oi.id) as purchase_count
+       FROM products p
+       INNER JOIN order_items oi ON p.id = oi.product_id
+       INNER JOIN orders o ON oi.order_id = o.id
+       WHERE o.user_id = $1
+       GROUP BY p.id
+       ORDER BY purchase_count DESC`,
+      [userId]
+    );
+
+    // Get user's favorite products
+    const favorites = await pool.query(
+      `SELECT p.* 
+       FROM products p
+       INNER JOIN favorites f ON p.id = f.product_id
+       WHERE f.user_id = $1`,
+      [userId]
+    );
+
+    // Combine purchase history and favorites
+    const recommendedMap = new Map();
+    
+    // Add products from purchase history (with higher priority based on purchase count)
+    purchaseHistory.rows.forEach(product => {
+      recommendedMap.set(product.id, {
+        ...product,
+        score: parseInt(product.purchase_count) * 10 // Purchase count weighted heavily
+      });
+    });
+
+    // Add favorite products (if not already in map, give them a good score)
+    favorites.rows.forEach(product => {
+      if (!recommendedMap.has(product.id)) {
+        recommendedMap.set(product.id, {
+          ...product,
+          score: 5 // Favorites get a baseline score
+        });
+      } else {
+        // If already in map (purchased AND favorited), boost the score
+        const existing = recommendedMap.get(product.id);
+        existing.score += 5;
+      }
+    });
+
+    // Get products from same categories as purchased/favorited items
+    if (recommendedMap.size > 0) {
+      const categories = [...new Set(
+        Array.from(recommendedMap.values()).map(p => p.category)
+      )].filter(c => c);
+
+      if (categories.length > 0) {
+        const similarProducts = await pool.query(
+          `SELECT * FROM products 
+           WHERE category = ANY($1) 
+           AND id NOT IN (SELECT product_id FROM order_items oi 
+                          INNER JOIN orders o ON oi.order_id = o.id 
+                          WHERE o.user_id = $2)
+           LIMIT $3`,
+          [categories, userId, limit * 2]
+        );
+
+        similarProducts.rows.forEach(product => {
+          if (!recommendedMap.has(product.id)) {
+            recommendedMap.set(product.id, {
+              ...product,
+              score: 3 // Similar category products get medium score
+            });
+          }
+        });
+      }
+    }
+
+    // If we have enough recommendations, sort and return
+    if (recommendedMap.size >= limit) {
+      const recommended = Array.from(recommendedMap.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(({ score, purchase_count, ...product }) => product);
+      
+      return res.status(200).json(recommended);
+    }
+
+    // If not enough recommendations, fill with random popular products
+    // (products with low stock = high demand/popular)
+    const randomProducts = await pool.query(
+      `SELECT * FROM products 
+       WHERE id NOT IN (${recommendedMap.size > 0 ? 
+         'SELECT unnest(ARRAY[' + Array.from(recommendedMap.keys()).join(',') + '])' : 
+         'SELECT 0'})
+       ORDER BY quantity ASC, RANDOM()
+       LIMIT $1`,
+      [limit - recommendedMap.size]
+    );
+
+    const finalRecommendations = [
+      ...Array.from(recommendedMap.values())
+        .sort((a, b) => b.score - a.score)
+        .map(({ score, purchase_count, ...product }) => product),
+      ...randomProducts.rows
+    ];
+
+    res.status(200).json(finalRecommendations.slice(0, limit));
+  } catch (error) {
+    console.error('Recommendation error:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
+  getRecommendedProducts,
 };

@@ -45,7 +45,7 @@ export default function OrderDetailScreen({ navigation, route }: OrderDetailScre
         {/* Order Info Card */}
         <View style={styles.orderInfoCard}>
           <View style={styles.orderHeader}>
-            <Text style={styles.orderId}>Order #{order.id}</Text>
+            <Text style={styles.orderId}>#{order.id.replace(/^ORD-/, '').slice(-8)}</Text>
             <View style={styles.statusBadge}>
               <Text style={styles.statusText}>Completed</Text>
             </View>

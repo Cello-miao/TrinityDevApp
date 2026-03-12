@@ -30,6 +30,7 @@ export default function HomeScreen({ navigation }: any) {
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [cartItemIds, setCartItemIds] = useState<Record<string, string>>({});
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +45,10 @@ export default function HomeScreen({ navigation }: any) {
 
   useEffect(() => {
     if (products.length > 0) {
-      loadRecommendations();
+      // Only load recommendations if not already loaded
+      if (recommendedProducts.length === 0) {
+        loadRecommendations();
+      }
       generateDynamicCategories();
     }
   }, [products]);
@@ -139,9 +143,31 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
+  const refreshRecommendations = async () => {
+    setIsLoadingRecommendations(true);
+    await loadRecommendations();
+    setIsLoadingRecommendations(false);
+  };
+
   const loadRecommendations = async () => {
     try {
-      // Load order history
+      // Try to load recommendations from backend API first
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, get personalized recommendations from backend
+        try {
+          const recommendations = await productAPI.getRecommendations(6);
+          setRecommendedProducts(recommendations);
+          return;
+        } catch (error) {
+          console.log('Failed to load backend recommendations, falling back to local logic:', error);
+          // Fall through to local logic if backend fails
+        }
+      }
+
+      // Fallback: Local recommendation logic (for guests or if backend fails)
+      // Load order history from local storage
       const ordersStr = await AsyncStorage.getItem('orders');
       
       if (ordersStr) {
@@ -302,20 +328,6 @@ export default function HomeScreen({ navigation }: any) {
               <Text style={styles.promoDescription}>Fresh products</Text>
             </View>
           </ImageBackground>
-
-          {/* Small Promo Cards */}
-          <View style={styles.smallPromosContainer}>
-            <View style={styles.smallPromo}>
-              <Text style={styles.smallPromoTitle}>New Members</Text>
-              <Text style={styles.smallPromoSubtitle}>€5 off first order</Text>
-              <Text style={styles.smallPromoDesc}>Use code: HELLO</Text>
-            </View>
-            <View style={styles.smallPromo}>
-              <Text style={styles.smallPromoTitle}>Free Delivery</Text>
-              <Text style={styles.smallPromoSubtitle}>On orders over €30</Text>
-              <Text style={styles.smallPromoDesc}>Save on shipping</Text>
-            </View>
-          </View>
         </View>
 
         {/* Shop by Category */}
@@ -350,9 +362,21 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* Recommended for You */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="star" size={18} color="#1e293b" />
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
+          <View style={styles.sectionHeaderWithAction}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star" size={18} color="#1e293b" />
+              <Text style={styles.sectionTitle}>Recommended for You</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={refreshRecommendations}
+              disabled={isLoadingRecommendations}
+            >
+              <Ionicons 
+                name="refresh" 
+                size={20} 
+                color={isLoadingRecommendations ? "#cbd5e1" : "#64748b"} 
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.productsGrid}>
@@ -558,32 +582,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   promoDescription: {
     color: '#e2e8f0',
     fontSize: 14,
-  },
-  smallPromosContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  smallPromo: {
-    flex: 1,
-    backgroundColor: theme.primary,
-    padding: 16,
-    borderRadius: 8,
-  },
-  smallPromoTitle: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  smallPromoSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  smallPromoDesc: {
-    color: '#94a3b8',
-    fontSize: 11,
   },
   categoriesGrid: {
     flexDirection: 'row',

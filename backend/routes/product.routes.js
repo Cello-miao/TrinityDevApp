@@ -6,11 +6,13 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  getRecommendedProducts,
 } = require("../controllers/product.controller");
 const verifyToken = require("../middleware/auth");
 const authorizeRoles = require("../middleware/roles");
 
 router.get("/", getAllProducts);
+router.get("/recommendations", verifyToken, getRecommendedProducts);
 router.get("/:id", getProductById);
 router.post(
   "/",

@@ -274,6 +274,13 @@ export const productAPI = {
   deleteProduct: async (id: string): Promise<void> => {
     await apiRequest(`/products/${id}`, { method: 'DELETE' });
   },
+
+  getRecommendations: async (limit: number = 6): Promise<Product[]> => {
+    const data = await apiRequest(`/products/recommendations?limit=${limit}`, { 
+      method: 'GET' 
+    });
+    return data.map(transformProduct);
+  },
 };
 
 // Cart API
@@ -397,6 +404,33 @@ export const userAPI = {
 
   deleteUser: async (id: string): Promise<void> => {
     await apiRequest(`/users/${id}`, { method: 'DELETE' });
+  },
+};
+
+// Favorites API
+export const favoritesAPI = {
+  getFavorites: async (): Promise<Product[]> => {
+    const data = await apiRequest('/favorites', { method: 'GET' });
+    return data.map(transformProduct);
+  },
+
+  addFavorite: async (productId: string): Promise<void> => {
+    const productIdNum = Number(productId);
+    await apiRequest('/favorites', {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productIdNum }),
+    });
+  },
+
+  removeFavorite: async (productId: string): Promise<void> => {
+    await apiRequest(`/favorites/${productId}`, { method: 'DELETE' });
+  },
+
+  checkFavorite: async (productId: string): Promise<boolean> => {
+    const data = await apiRequest(`/favorites/check/${productId}`, { 
+      method: 'GET' 
+    });
+    return data.isFavorite;
   },
 };
 

@@ -89,7 +89,7 @@ export default function CheckoutScreen({ route, navigation }: any) {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const deliveryFee = 5.0;
+  const deliveryFee = subtotal >= 100 ? 0 : 5.0;
   const orderTotal = subtotal + deliveryFee;
 
   const validateForm = () => {

@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../types';
 import { addToCart } from '../lib/cartUtils';
+import { favoritesAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
 
 const { width } = Dimensions.get('window');
@@ -31,6 +32,20 @@ export default function FavoritesScreen({ navigation }: any) {
 
   const loadFavorites = async () => {
     try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, load from backend
+        try {
+          const favs = await favoritesAPI.getFavorites();
+          setFavorites(favs);
+          return;
+        } catch (error) {
+          console.log('Failed to load backend favorites, using local storage:', error);
+        }
+      }
+
+      // Fallback to local storage for guests or if backend fails
       const favoritesStr = await AsyncStorage.getItem('favorites');
       if (favoritesStr) {
         setFavorites(JSON.parse(favoritesStr));
@@ -52,6 +67,21 @@ export default function FavoritesScreen({ navigation }: any) {
 
   const removeFavorite = async (product: Product) => {
     try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, remove from backend
+        try {
+          await favoritesAPI.removeFavorite(product.id);
+          const newFavorites = favorites.filter(p => p.id !== product.id);
+          setFavorites(newFavorites);
+          return;
+        } catch (error) {
+          console.log('Failed to remove from backend, using local storage:', error);
+        }
+      }
+
+      // Fallback to local storage for guests or if backend fails
       const newFavorites = favorites.filter(p => p.id !== product.id);
       await AsyncStorage.setItem('favorites', JSON.stringify(newFavorites));
       setFavorites(newFavorites);

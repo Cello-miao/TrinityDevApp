@@ -214,7 +214,9 @@ export default function OrderHistoryScreen({ navigation }: any) {
                 onPress={() => toggleOrderExpansion(order.id)}
               >
                 <View style={styles.orderHeaderLeft}>
-                  <Text style={styles.orderId}>ORD-{order.id.slice(0, 3)}</Text>
+                  <Text style={styles.orderId}>
+                    #{order.id.replace(/^ORD-/, '').slice(-8)}
+                  </Text>
                   <View style={styles.completedBadge}>
                     <Text style={styles.completedText}>Completed</Text>
                   </View>
