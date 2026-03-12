@@ -30,7 +30,7 @@ jobs:
     steps:
       # Use fetch-depth: 0 to retrieve all branches and full commit history
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           persist-credentials: false
