@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { repairTextEncodingDeep } = require("../utils/textEncoding");
 
 const sanitizeBarcode = (barcode) => {
   if (typeof barcode !== "string") {
@@ -84,7 +85,7 @@ const findProductByBarcode = async (req, res) => {
 
     return res.status(200).json({
       message: "Product found",
-      product: product.rows[0],
+      product: repairTextEncodingDeep(product.rows[0]),
     });
   } catch (error) {
     return res.status(500).json({
@@ -183,11 +184,11 @@ const scanAndAddToCart = async (req, res) => {
 
     return res.status(200).json({
       message: "Product added to cart from barcode scan",
-      product: {
+      product: repairTextEncodingDeep({
         id: product.id,
         name: product.name,
         barcode: product.barcode,
-      },
+      }),
       cartItem,
     });
   } catch (error) {
