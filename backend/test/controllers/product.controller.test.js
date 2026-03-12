@@ -47,15 +47,15 @@ describe('product.controller', () => {
       .mockResolvedValueOnce({ rows: [product] });
     const req = {
       body: {
-        name: 'Bread',
+        name: 'CrÃ¨me brÃ»lÃ©e',
         price: 5,
-        description: 'desc',
-        brand: 'brand',
+        description: 'DÃ©licieux dessert',
+        brand: 'FranÃ§ais',
         picture: 'x.png',
-        category: 'food',
+        category: 'Ã‰picerie',
         barcode: '1111',
         nutrition_grade: 'A',
-        nutritional_info: {},
+        nutritional_info: { label: 'Sucre Ã©levÃ©' },
         quantity: 10,
       },
     };
@@ -63,6 +63,22 @@ describe('product.controller', () => {
 
     await createProduct(req, res);
 
+    expect(pool.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO products'),
+      [
+        'Crème brûlée',
+        5,
+        'Délicieux dessert',
+        'Français',
+        'x.png',
+        'Épicerie',
+        '1111',
+        'A',
+        { label: 'Sucre élevé' },
+        10,
+      ],
+    );
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(product);
   });
