@@ -55,6 +55,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     barcode: '',
     image: '',
     stock: '100',
+    discount: '0',
   });
 
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       barcode: product.barcode || '',
       image: product.image || '',
       stock: product.stock.toString(),
+      discount: (product.discount || 0).toString(),
     });
     setIsAddModalVisible(true);
   };
@@ -290,6 +292,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         barcode: normalizedBarcode,
         image: newProduct.image || 'https://via.placeholder.com/150',
         stock: parseInt(newProduct.stock) || 0,
+        discount: parseFloat(newProduct.discount) || 0,
       };
 
       if (editingProductId) {
@@ -310,6 +313,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         barcode: '',
         image: '',
         stock: '100',
+        discount: '0',
       });
       loadProducts();
     } catch (error) {
@@ -414,6 +418,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 barcode: '',
                 image: '',
                 stock: '100',
+                discount: '0',
               });
               setIsAddModalVisible(true);
             }}
@@ -426,10 +431,18 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         {/* Products List */}
         {filteredProducts.map((product) => (
           <View key={product.id} style={styles.productCard}>
-            <Image
-              source={{ uri: product.image || 'https://via.placeholder.com/150' }}
-              style={styles.productImage}
-            />
+            <View style={styles.productImageContainer}>
+              {Number(product.discount) > 0 && (
+                <View style={styles.discountBadge}>
+                  <Ionicons name="flash" size={10} color="#fff" />
+                  <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
+                </View>
+              )}
+              <Image
+                source={{ uri: product.image || 'https://via.placeholder.com/150' }}
+                style={styles.productImage}
+              />
+            </View>
             <View style={styles.productContent}>
               <View style={styles.productHeader}>
                 <View style={styles.productLeft}>
@@ -437,7 +450,16 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>{getCategoryName(product.category)}</Text>
                   </View>
-                  <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                  {Number(product.discount) > 0 ? (
+                    <View style={styles.priceWrap}>
+                      <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
+                      <Text style={styles.discountedPrice}>
+                        €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                  )}
                   <Text style={styles.productBarcode}>
                     {product.barcode || 'No barcode'}
                   </Text>
@@ -565,6 +587,18 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
                   keyboardType="numeric"
                 />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Discount (%)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  value={newProduct.discount}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, discount: text })}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.inputHint}>Enter discount percentage (0-100)</Text>
               </View>
 
               <View style={styles.inputGroup}>
@@ -791,6 +825,27 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     backgroundColor: theme.inputBackground,
   },
+  productImageContainer: {
+    position: 'relative',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   productContent: {
     flex: 1,
   },
@@ -834,6 +889,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
     marginBottom: 4,
+  },
+  priceWrap: {
+    marginBottom: 4,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.success,
   },
   productBarcode: {
     fontSize: 13,
@@ -920,6 +989,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: '600',
     color: theme.primary,
     marginBottom: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
   },
   input: {
     backgroundColor: theme.inputBackground,

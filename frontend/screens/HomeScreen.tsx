@@ -317,17 +317,22 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           {/* Main Promo Banner */}
-          <ImageBackground
-            source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800' }}
-            style={styles.mainPromo}
-            imageStyle={{ borderRadius: 12 }}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('PromoProducts')}
           >
-            <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Weekend Special</Text>
-              <Text style={styles.promoSubtitle}>Up to 30% Off</Text>
-              <Text style={styles.promoDescription}>Fresh products</Text>
-            </View>
-          </ImageBackground>
+            <ImageBackground
+              source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800' }}
+              style={styles.mainPromo}
+              imageStyle={{ borderRadius: 12 }}
+            >
+              <View style={styles.promoOverlay}>
+                <Text style={styles.promoTitle}>Promotional Products</Text>
+                {/* <Text style={styles.promoSubtitle}>Up to 50% Off</Text> */}
+                <Text style={styles.promoDescription}>Tap to view discounted items</Text>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
         </View>
 
         {/* Shop by Category */}
@@ -391,6 +396,12 @@ export default function HomeScreen({ navigation }: any) {
                     <Text style={styles.hotBadgeText}>Hot</Text>
                   </View>
                 )}
+                {Number(product.discount) > 0 && (
+                  <View style={styles.discountBadge}>
+                    <Ionicons name="flash" size={10} color="#fff" />
+                    <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
+                  </View>
+                )}
                 <Image
                   source={{ uri: product.image }}
                   style={styles.productImage}
@@ -402,8 +413,20 @@ export default function HomeScreen({ navigation }: any) {
                     {product.name}
                   </Text>
                   <View style={styles.productFooter}>
-                    <View>
-                      <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                    <View style={styles.priceBlock}>
+                      {Number(product.discount) > 0 ? (
+                        <>
+                          <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
+                          <Text style={styles.productPrice}>
+                            €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={[styles.originalPrice, styles.originalPricePlaceholder]}>€0.00</Text>
+                          <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                        </>
+                      )}
                       <Text style={styles.stockText}>Stock {product.stock}</Text>
                     </View>
                     {cartItems[product.id] ? (
@@ -636,6 +659,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   productImage: {
     width: '100%',
     height: 140,
@@ -660,10 +701,23 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  priceBlock: {
+    minHeight: 48,
+    justifyContent: 'flex-end',
+  },
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
     color: theme.priceText,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  originalPricePlaceholder: {
+    opacity: 0,
   },
   stockText: {
     fontSize: 10,

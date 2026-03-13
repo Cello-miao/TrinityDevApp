@@ -3,7 +3,7 @@ const pool = require("../config/db");
 const getCart = async (req, res) => {
   try {
     const cart = await pool.query(
-      `SELECT cart.id, cart.product_id, products.name, products.price, products.picture, cart.quantity
+      `SELECT cart.id, cart.product_id, products.name, products.price, products.discount_percentage, products.picture, cart.quantity
       FROM cart JOIN products ON cart.product_id = products.id
       WHERE cart.user_id = $1`,
       [req.user.id],

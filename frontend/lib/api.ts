@@ -62,6 +62,7 @@ const transformProduct = (dbProduct: any): Product => {
     description: dbProduct.description || '',
     barcode: dbProduct.barcode || '',
     stock: dbProduct.quantity || 0,
+    discount: parseFloat(dbProduct.discount_percentage) || 0,
     brand: dbProduct.brand || '',
     nutritionalInfo,
   };
@@ -246,6 +247,7 @@ export const productAPI = {
       category: product.category,
       barcode: product.barcode,
       quantity: product.stock,
+      discount_percentage: product.discount || 0,
     };
     const data = await apiRequest('/products', {
       method: 'POST',
@@ -263,6 +265,7 @@ export const productAPI = {
       category: product.category,
       barcode: product.barcode,
       quantity: product.stock,
+      discount_percentage: product.discount || 0,
     };
     const data = await apiRequest(`/products/${id}`, {
       method: 'PUT',
@@ -280,6 +283,19 @@ export const productAPI = {
       method: 'GET' 
     });
     return data.map(transformProduct);
+  },
+
+  getDiscountedProducts: async (): Promise<Product[]> => {
+    const data = await apiRequest('/products/discounted/list', { method: 'GET' });
+    return data.map(transformProduct);
+  },
+
+  updateProductDiscount: async (id: string, discount: number): Promise<Product> => {
+    const data = await apiRequest(`/products/${id}/discount`, {
+      method: 'PATCH',
+      body: JSON.stringify({ discount_percentage: discount }),
+    });
+    return transformProduct(data);
   },
 };
 

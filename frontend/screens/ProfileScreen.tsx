@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { logout } from '../lib/auth';
-import { userAPI, orderAPI } from '../lib/api';
+import { userAPI, orderAPI, favoritesAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme, useThemeMode, useAccessibility } from '../lib/theme';
 
@@ -73,13 +73,29 @@ export default function ProfileScreen({ navigation }: any) {
 
     // Load favorites count
     try {
+      const token = await AsyncStorage.getItem('token');
+
+      if (token) {
+        try {
+          const favorites = await favoritesAPI.getFavorites();
+          setFavoritesCount(favorites.length);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.log('Failed to load backend favorites count, using local storage:', error);
+        }
+      }
+
       const favoritesStr = await AsyncStorage.getItem('favorites');
       if (favoritesStr) {
         const favorites = JSON.parse(favoritesStr);
-        setFavoritesCount(favorites.length);
+        setFavoritesCount(Array.isArray(favorites) ? favorites.length : 0);
+      } else {
+        setFavoritesCount(0);
       }
     } catch (err) {
       console.error('Failed to load favorites:', err);
+      setFavoritesCount(0);
     }
 
     setLoading(false);

@@ -193,9 +193,9 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           
           <View style={styles.priceContainer}>
             <Text style={styles.price}>€{product.price.toFixed(2)}</Text>
-            {product.discount && (
+            {Number(product.discount) > 0 && (
               <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>-{product.discount}%</Text>
+                <Text style={styles.discountText}>{`-${Math.round(product.discount || 0)}%`}</Text>
               </View>
             )}
           </View>

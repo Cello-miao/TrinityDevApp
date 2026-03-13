@@ -31,6 +31,7 @@ import AdminOrdersScreen from './screens/AdminOrdersScreen';
 import AdminCustomersScreen from './screens/AdminCustomersScreen';
 import AdminProfileScreen from './screens/AdminProfileScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
+import PromoProductsScreen from './screens/PromoProductsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -219,6 +220,11 @@ function AppContent() {
             name="ProductDetail" 
             component={ProductDetailScreen}
             options={{ title: 'Product Details' }}
+          />
+          <Stack.Screen 
+            name="PromoProducts" 
+            component={PromoProductsScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen 
             name="Checkout" 

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS products (
   nutrition_grade VARCHAR(1),
   nutritional_info JSON,
   quantity INTEGER DEFAULT 0,
+  discount_percentage DECIMAL(5,2) DEFAULT 0 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

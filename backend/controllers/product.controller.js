@@ -56,6 +56,7 @@ const createProduct = async (req, res) => {
       nutrition_grade,
       nutritional_info,
       quantity,
+      discount_percentage,
     } = req.body;
 
     const sanitizedProduct = repairTextEncodingDeep({
@@ -84,8 +85,8 @@ const createProduct = async (req, res) => {
     }
 
     const newProduct = await pool.query(
-      `INSERT INTO products (name, price, description, brand, picture, category, barcode, nutrition_grade, nutritional_info, quantity)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      `INSERT INTO products (name, price, description, brand, picture, category, barcode, nutrition_grade, nutritional_info, quantity, discount_percentage)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         sanitizedProduct.name,
         price,
@@ -97,6 +98,7 @@ const createProduct = async (req, res) => {
         sanitizedProduct.nutrition_grade,
         sanitizedProduct.nutritional_info,
         quantity,
+        discount_percentage || 0,
       ],
     );
     res.status(201).json(repairTextEncodingDeep(newProduct.rows[0]));
@@ -119,6 +121,7 @@ const updateProduct = async (req, res) => {
       nutrition_grade,
       nutritional_info,
       quantity,
+      discount_percentage,
     } = req.body;
 
     const sanitizedProduct = repairTextEncodingDeep({
@@ -148,8 +151,8 @@ const updateProduct = async (req, res) => {
 
     const updatedProduct = await pool.query(
       `UPDATE products SET name=$1, price=$2, description=$3, brand=$4, picture=$5, 
-      category=$6, barcode=$7, nutrition_grade=$8, nutritional_info=$9, quantity=$10,
-      updated_at=CURRENT_TIMESTAMP WHERE id=$11 RETURNING *`,
+      category=$6, barcode=$7, nutrition_grade=$8, nutritional_info=$9, quantity=$10, discount_percentage=$11,
+      updated_at=CURRENT_TIMESTAMP WHERE id=$12 RETURNING *`,
       [
         sanitizedProduct.name,
         price,
@@ -161,6 +164,7 @@ const updateProduct = async (req, res) => {
         sanitizedProduct.nutrition_grade,
         sanitizedProduct.nutritional_info,
         quantity,
+        discount_percentage || 0,
         id,
       ],
     );
@@ -184,6 +188,43 @@ const deleteProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
     res.status(200).json({ message: "Product deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const getDiscountedProducts = async (req, res) => {
+  try {
+    const products = await pool.query(
+      "SELECT * FROM products WHERE discount_percentage > 0 ORDER BY discount_percentage DESC"
+    );
+    res.status(200).json(repairTextEncodingDeep(products.rows));
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const updateProductDiscount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { discount_percentage } = req.body;
+
+    if (discount_percentage < 0 || discount_percentage > 100) {
+      return res.status(400).json({ 
+        message: "Discount percentage must be between 0 and 100" 
+      });
+    }
+
+    const updatedProduct = await pool.query(
+      "UPDATE products SET discount_percentage=$1, updated_at=CURRENT_TIMESTAMP WHERE id=$2 RETURNING *",
+      [discount_percentage, id]
+    );
+
+    if (updatedProduct.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json(repairTextEncodingDeep(updatedProduct.rows[0]));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -310,5 +351,7 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getDiscountedProducts,
+  updateProductDiscount,
   getRecommendedProducts,
 };

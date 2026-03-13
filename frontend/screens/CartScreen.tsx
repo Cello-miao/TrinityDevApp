@@ -44,6 +44,7 @@ export default function CartScreen({ navigation }: any) {
             id: item.product_id?.toString() || '',
             name: item.name || 'Unknown Product',
             price: parseFloat(item.price) || 0,
+            discount: parseFloat(item.discount_percentage) || 0,
             image: item.picture || '',
             category: '',
             description: '',
@@ -145,8 +146,16 @@ export default function CartScreen({ navigation }: any) {
     }
   };
 
+  const getDiscountedPrice = (product: Product) => {
+    const discount = product.discount || 0;
+    if (discount <= 0) {
+      return product.price;
+    }
+    return product.price * (1 - discount / 100);
+  };
+
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + getDiscountedPrice(item.product) * item.quantity,
     0
   );
 
@@ -201,9 +210,22 @@ export default function CartScreen({ navigation }: any) {
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{item.product.name}</Text>
               <Text style={styles.productVendor}>Artisan Bakery</Text>
-              <Text style={styles.productPrice}>
-                €{item.product.price.toFixed(2)}
-              </Text>
+              {Number(item.product.discount) > 0 ? (
+                <View style={styles.priceWrap}>
+                  <Text style={styles.originalPrice}>€{item.product.price.toFixed(2)}</Text>
+                  <View style={styles.discountedPriceRow}>
+                    <Text style={styles.discountedPrice}>€{getDiscountedPrice(item.product).toFixed(2)}</Text>
+                    <View style={styles.discountBadge}>
+                      <Ionicons name="flash" size={10} color="#fff" />
+                      <Text style={styles.discountBadgeText}>{`${Math.round(item.product.discount)}%`}</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.productPrice}>
+                  €{item.product.price.toFixed(2)}
+                </Text>
+              )}
               
               {/* Quantity Controls */}
               <View style={styles.quantityContainer}>
@@ -374,6 +396,39 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
     marginBottom: 8,
+  },
+  priceWrap: {
+    marginBottom: 8,
+  },
+  originalPrice: {
+    fontSize: 13,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  discountedPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.success,
+  },
+  discountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.warning,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   deleteButton: {
     padding: 8,

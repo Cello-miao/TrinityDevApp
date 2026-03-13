@@ -85,8 +85,16 @@ export default function CheckoutScreen({ route, navigation }: any) {
     }
   };
 
+  const getDiscountedPrice = (item: CartItem) => {
+    const discount = item.product.discount || 0;
+    if (discount <= 0) {
+      return item.product.price;
+    }
+    return item.product.price * (1 - discount / 100);
+  };
+
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + getDiscountedPrice(item) * item.quantity,
     0,
   );
   const deliveryFee = subtotal >= 100 ? 0 : 5.0;
@@ -623,12 +631,26 @@ export default function CheckoutScreen({ route, navigation }: any) {
 
           {cartItems.map((item) => (
             <View key={item.product.id} style={styles.summaryItem}>
-              <Text style={styles.summaryItemText}>
-                {item.product.name} × {item.quantity}
-              </Text>
-              <Text style={styles.summaryItemPrice}>
-                €{(item.product.price * item.quantity).toFixed(2)}
-              </Text>
+              <View style={styles.summaryItemInfo}>
+                <Text style={styles.summaryItemText}>
+                  {item.product.name} × {item.quantity}
+                </Text>
+                {Number(item.product.discount) > 0 && (
+                  <Text style={styles.summaryDiscountText}>
+                    {`${Math.round(item.product.discount || 0)}% OFF`}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.summaryPriceInfo}>
+                {Number(item.product.discount) > 0 && (
+                  <Text style={styles.summaryOriginalPrice}>
+                    €{(item.product.price * item.quantity).toFixed(2)}
+                  </Text>
+                )}
+                <Text style={styles.summaryItemPrice}>
+                  €{(getDiscountedPrice(item) * item.quantity).toFixed(2)}
+                </Text>
+              </View>
             </View>
           ))}
 
@@ -750,10 +772,29 @@ const createStyles = (theme: any) =>
     summaryItem: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "flex-start",
       marginBottom: 12,
     },
+    summaryItemInfo: {
+      flex: 1,
+      marginRight: 8,
+    },
     summaryItemText: { fontSize: 14, color: theme.primary, flex: 1 },
+    summaryDiscountText: {
+      fontSize: 12,
+      color: theme.warning,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    summaryPriceInfo: {
+      alignItems: "flex-end",
+    },
+    summaryOriginalPrice: {
+      fontSize: 12,
+      color: theme.textTertiary,
+      textDecorationLine: "line-through",
+      marginBottom: 1,
+    },
     summaryItemPrice: { fontSize: 14, fontWeight: "500", color: theme.text },
     divider: { height: 1, backgroundColor: theme.border, marginVertical: 12 },
     summaryRow: {
