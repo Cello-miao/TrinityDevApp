@@ -119,9 +119,10 @@ describe('OrderHistoryScreen', () => {
     );
 
     await waitFor(() => {
-      expect(getByText('Order Statistics')).toBeTruthy();
-      expect(getByText('2')).toBeTruthy();
-      expect(getByText('€30')).toBeTruthy();
+      expect(getByText('#zzz999')).toBeTruthy();
+      expect(getByText('#abc111')).toBeTruthy();
+      expect(getByText('€20.00')).toBeTruthy();
+      expect(getByText('€10.00')).toBeTruthy();
     });
 
     expect(queryByText('Order Items')).toBeNull();
