@@ -42,10 +42,12 @@ export default function AdminStatsScreen({ navigation }: any) {
       const completedOrders = orders.filter(o => o.status === 'completed').length;
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
+      const nonAdminUsers = users.filter(u => u.role !== 'admin');
+
       setKpiStats({
         totalRevenue,
         totalOrders: orders.length,
-        totalUsers: users.length,
+        totalUsers: nonAdminUsers.length,
         totalProducts: products.length,
         averageOrderValue,
         completedOrders,

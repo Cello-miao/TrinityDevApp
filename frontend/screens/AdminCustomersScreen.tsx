@@ -44,7 +44,8 @@ export default function AdminCustomersScreen({ navigation }: any) {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const users = await userAPI.getAllUsers();
+      const allUsers = await userAPI.getAllUsers();
+      const users = allUsers.filter(u => u.role !== 'admin');
       
       // Load all orders from API
       const allOrders = await orderAPI.getAllOrders();
