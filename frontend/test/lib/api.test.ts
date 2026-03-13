@@ -299,3 +299,145 @@ describe('frontend api module', () => {
     );
   });
 });
+
+// ─── getApiBaseUrl HTTPS URL construction ────────────────────────────────────
+// Each test uses jest.resetModules() + jest.doMock() so the api module is
+// re-evaluated with different environment mocks, exercising every branch of
+// getApiBaseUrl() and verifying all generated base URLs use HTTPS.
+
+// ─── getApiBaseUrl HTTPS URL construction ────────────────────────────────────
+// Jest global __DEV__ is set to false (production).
+//
+// "prod" tests stay at the outer level and exercise the two reachable code
+// paths in production:  EXPO_PUBLIC_API_BASE_URL override, and the hard-coded
+// production server URL.
+//
+// "dev environment only" tests are grouped in a nested describe which
+// temporarily sets __DEV__ = true so the host-inference branches can still be
+// covered without changing the global test environment.
+
+describe('getApiBaseUrl HTTPS URL construction', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+  });
+
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_API_BASE_URL;
+    // Always restore prod default in case a nested test changed it.
+    (global as any).__DEV__ = false;
+  });
+
+  // ── Production tests (__DEV__ = false, the Jest global default) ───────────
+
+  test('uses EXPO_PUBLIC_API_BASE_URL and strips trailing slash', async () => {
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'https://custom.server.com/api/';
+    jest.doMock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
+    jest.doMock('react-native', () => ({ NativeModules: {}, Platform: { OS: 'ios' } }));
+
+    const { API_BASE_URL } = await import('../../lib/api');
+
+    expect(API_BASE_URL).toBe('https://custom.server.com/api');
+  });
+
+  test('EXPO_PUBLIC_API_BASE_URL without trailing slash is returned unchanged', async () => {
+    process.env.EXPO_PUBLIC_API_BASE_URL = 'https://prod.example.com/api';
+    jest.doMock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
+    jest.doMock('react-native', () => ({ NativeModules: {}, Platform: { OS: 'ios' } }));
+
+    const { API_BASE_URL } = await import('../../lib/api');
+
+    expect(API_BASE_URL).toBe('https://prod.example.com/api');
+  });
+
+  test('returns the production HTTPS base URL when no env var is set', async () => {
+    jest.doMock('expo-constants', () => ({ __esModule: true, default: { expoConfig: {} } }));
+    jest.doMock('react-native', () => ({ NativeModules: {}, Platform: { OS: 'ios' } }));
+
+    const { API_BASE_URL } = await import('../../lib/api');
+
+    expect(API_BASE_URL).toBe('https://13.37.46.130/api');
+    expect(API_BASE_URL).toMatch(/^https:\/\//);
+  });
+
+  // ── Dev-only tests (__DEV__ = true temporarily) ───────────────────────────
+  // These host-inference branches are only reachable in development builds.
+  // Each test flips __DEV__ to true, imports the module (which calls
+  // getApiBaseUrl() at load time), then the outer afterEach restores false.
+
+  const devOnlyDescribe =
+    process.env.RUN_DEV_ONLY_TESTS === 'true' ? describe : describe.skip;
+
+  devOnlyDescribe('[dev environment only] host-inference URL branches', () => {
+    const loadApiWith = async (
+      hostUri: string | undefined,
+      scriptURL: string | undefined,
+      platform: string,
+    ) => {
+      jest.doMock('expo-constants', () => ({
+        __esModule: true,
+        default: {
+          expoConfig: hostUri !== undefined ? { hostUri } : {},
+        },
+      }));
+      jest.doMock('react-native', () => ({
+        NativeModules: scriptURL !== undefined ? { SourceCode: { scriptURL } } : { SourceCode: {} },
+        Platform: { OS: platform },
+      }));
+      return import('../../lib/api');
+    };
+
+    beforeEach(() => {
+      (global as any).__DEV__ = true;
+    });
+
+    afterEach(() => {
+      (global as any).__DEV__ = false;
+    });
+
+    test('infers https URL from Expo hostUri', async () => {
+      const { API_BASE_URL } = await loadApiWith('10.0.0.5:8081', undefined, 'ios');
+
+      expect(API_BASE_URL).toBe('https://10.0.0.5:3443/api');
+    });
+
+    test('infers https URL from scriptURL when hostUri is absent', async () => {
+      const { API_BASE_URL } = await loadApiWith(undefined, 'exp://192.168.1.50:8081', 'ios');
+
+      expect(API_BASE_URL).toBe('https://192.168.1.50:3443/api');
+    });
+
+    test('scriptURL with http scheme is still parsed to infer host', async () => {
+      const { API_BASE_URL } = await loadApiWith(undefined, 'http://172.16.0.1:8081', 'ios');
+
+      expect(API_BASE_URL).toBe('https://172.16.0.1:3443/api');
+    });
+
+    test('falls back to https://10.0.2.2:3443/api on Android when no hints', async () => {
+      const { API_BASE_URL } = await loadApiWith(undefined, undefined, 'android');
+
+      expect(API_BASE_URL).toBe('https://10.0.2.2:3443/api');
+    });
+
+    test('falls back to https://localhost:3443/api on non-Android when no hints', async () => {
+      const { API_BASE_URL } = await loadApiWith(undefined, undefined, 'ios');
+
+      expect(API_BASE_URL).toBe('https://localhost:3443/api');
+    });
+
+    test('every resolved dev base URL starts with https://', async () => {
+      const cases: [string | undefined, string | undefined, string][] = [
+        ['192.168.1.2:8081', undefined, 'ios'],
+        [undefined, 'exp://192.168.1.3:8081', 'ios'],
+        [undefined, undefined, 'android'],
+        [undefined, undefined, 'ios'],
+      ];
+
+      for (const [hostUri, scriptURL, platform] of cases) {
+        jest.resetModules();
+        const { API_BASE_URL } = await loadApiWith(hostUri, scriptURL, platform);
+        expect(API_BASE_URL).toMatch(/^https:\/\//);
+      }
+    });
+  });
+});

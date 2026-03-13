@@ -5,6 +5,7 @@ module.exports = {
     {
       displayName: "frontend",
       testEnvironment: "node",
+      globals: { __DEV__: false },
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
       },
