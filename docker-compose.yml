@@ -20,17 +20,15 @@ services:
       retries: 10
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${DOCKERHUB_USERNAME}/trinitydevapp-backend:${IMAGE_TAG:-latest}
     container_name: trinity_backend
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      DB_HOST: ${DB_HOST:-db}
+      NODE_ENV: ${NODE_ENV:-production}
+      DB_HOST: db
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
@@ -42,8 +40,8 @@ services:
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
       PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-freshcart://payment-success}
       PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-freshcart://payment-cancel}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost:19006}
-      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-false}
     expose:
       - "3000"
 
@@ -54,11 +52,12 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
-      - "3443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
+      - ./downloads:/usr/share/nginx/html/downloads:ro
 
   tests:
     image: node:20-alpine

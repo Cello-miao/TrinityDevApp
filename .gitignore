@@ -34,3 +34,12 @@ coverage/
 # Temporary local scripts
 scripts/
 
+# Local editor/workspace settings
+.vscode/
+
+# Local distribution artifacts (APK/cert download staging)
+downloads/
+
+# Local certificate backups
+nginx/certs/*.bak
+

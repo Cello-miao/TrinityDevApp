@@ -3,13 +3,21 @@ import Constants from 'expo-constants';
 import { NativeModules, Platform } from 'react-native';
 import { Order, Product, User } from '../types';
 
-// Configure API base URL - adjust according to your environment
-// HTTPS is served by local Nginx on port 3443.
-// For Android emulator: use 10.0.2.2 to access host localhost.
-// For iOS simulator/device: use your computer's IP address.
+const PROD_API_BASE_URL = 'https://13.37.46.130/api';
+
+// Configure API base URL.
+// Priority order:
+// 1) EXPO_PUBLIC_API_BASE_URL for explicit targets like AWS HTTPS.
+// 2) Production native builds default to the deployed HTTPS API.
+// 2) Expo host inference for local HTTPS dev via Nginx on port 3443.
+// 3) Platform-specific local fallbacks.
 const getApiBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_API_BASE_URL;
+    return process.env.EXPO_PUBLIC_API_BASE_URL.replace(/\/$/, '');
+  }
+
+  if (!__DEV__) {
+    return PROD_API_BASE_URL;
   }
 
   const hostUri = Constants.expoConfig?.hostUri;

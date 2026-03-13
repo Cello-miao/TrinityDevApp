@@ -1,5 +1,24 @@
 # Trinity Project Mobile Application Development Roadmap
 
+## Production APK Installation Guide
+
+This repository can now produce a standalone Android release APK.
+The release package does not require Expo Go and does not depend on a running Metro server.
+
+Production download endpoints:
+- APK: `https://13.37.46.130/downloads/app-release.apk`
+- Root CA certificate: `https://13.37.46.130/downloads/rootCA.crt`
+
+Recommended installation flow for a real Android device:
+1. Download and install `rootCA.crt` if your device does not already trust the project CA.
+2. Download `app-release.apk` from the same server.
+3. Install the APK and launch the app directly from the Android launcher.
+
+Release build behavior:
+- The release APK targets the production backend at `https://13.37.46.130/api`.
+- The Android build embeds the project root CA through `networkSecurityConfig`.
+- Expo Go is not required for installation or runtime.
+
 ## Quick Start (Docker-First)
 
 This project uses a split setup:
