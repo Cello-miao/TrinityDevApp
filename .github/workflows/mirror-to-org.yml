@@ -1,16 +1,19 @@
 name: Mirror to Epitech Organization
 
 on:
-  # 1. Periodic Synchronization: Runs every 2 days to ensure total alignment
+  # Scheduled synchronization keeps the destination repository aligned,
+  # even when no qualifying CI/CD workflow_run event occurs.
   schedule:
     - cron: '0 0 */2 * *'
 
-  # 2. Pipeline-Driven Synchronization: Triggered when CI/CD pipeline finishes successfully
+  # Event-driven synchronization: trigger when CI/CD pipeline completes
+  # on either long-lived branch.
   workflow_run:
     workflows: ["CI/CD-pipeline"]
     types: [completed]
     branches:
       - dev
+      - main
 
 permissions:
   contents: write
@@ -19,16 +22,17 @@ jobs:
   mirror:
     name: Mirror All Branches
     runs-on: ubuntu-latest
-    
-    # Logic: Run on schedule, or after successful CI/CD pipeline workflow runs
+
+    # Run on schedule, or when CI/CD-pipeline succeeds for either dev or main.
     if: >
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'dev')
+       (github.event.workflow_run.head_branch == 'dev' ||
+        github.event.workflow_run.head_branch == 'main'))
 
     steps:
-      # Use fetch-depth: 0 to retrieve all branches and full commit history
+      # Use full fetch history so all branches are available for mirroring.
       - name: Checkout Repository
         uses: actions/checkout@v5
         with:
@@ -46,9 +50,9 @@ jobs:
         run: |
           git remote set-url origin https://oauth2:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git fetch --all
-          
-          # Iterate through all remote branches to create local tracking branches.
-          # This is required because 'git push --mirror' only pushes local refs.
+
+          # Create local tracking branches for all remote branches.
+          # 'git push --all' only pushes local refs.
           for branch in $(git branch -r | grep "origin/" | grep -v HEAD | sed 's|origin/||'); do
             git branch "$branch" "origin/$branch" 2>/dev/null || true
           done
@@ -58,10 +62,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ORG_MIRROR_TOKEN }}
           TARGET_REPO: EpitechMscInternationalPromo2027/I-DEV-801-INT-8-1-trinitydevapp-1
         run: |
-          # Add the destination organization repository as a remote
+          # Register destination repository as remote target.
           git remote add org-mirror https://oauth2:${GITHUB_TOKEN}@github.com/${TARGET_REPO}.git
-          
-          # Push all branches and tags (but don't delete extra branches in target repo)
-          # This avoids the error when target repo has a 'main' branch that we don't have
+
+          # Push all branches and tags without deleting target-only refs.
           git push --all org-mirror --force --verbose
           git push --tags org-mirror --force --verbose || true
