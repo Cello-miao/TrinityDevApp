@@ -21,6 +21,13 @@ const normalizeItems = (items) => {
 
 const generateOrderNumber = () => `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
+const getDiscountedUnitPrice = (price, discountPercentage) => {
+  const basePrice = Number(price) || 0;
+  const discount = Number(discountPercentage) || 0;
+  const safeDiscount = Math.min(100, Math.max(0, discount));
+  return Number((basePrice * (1 - safeDiscount / 100)).toFixed(2));
+};
+
 const createOrder = async (req, res) => {
   const client = await pool.connect();
 
@@ -49,7 +56,7 @@ const createOrder = async (req, res) => {
     if (normalizedItems.length > 0) {
       const productIds = normalizedItems.map((item) => item.productId);
       const productsResult = await client.query(
-        "SELECT id, name, picture, price, quantity FROM products WHERE id = ANY($1::int[])",
+        "SELECT id, name, picture, price, discount_percentage, quantity FROM products WHERE id = ANY($1::int[])",
         [productIds],
       );
 
@@ -76,12 +83,12 @@ const createOrder = async (req, res) => {
           quantity: item.quantity,
           name: product.name,
           picture: product.picture,
-          unitPrice: Number(product.price),
+          unitPrice: getDiscountedUnitPrice(product.price, product.discount_percentage),
         });
       }
     } else {
       const cartResult = await client.query(
-        `SELECT c.product_id, c.quantity, p.name, p.picture, p.price, p.quantity AS stock_quantity
+        `SELECT c.product_id, c.quantity, p.name, p.picture, p.price, p.discount_percentage, p.quantity AS stock_quantity
          FROM cart c
          JOIN products p ON p.id = c.product_id
          WHERE c.user_id = $1`,
@@ -107,7 +114,7 @@ const createOrder = async (req, res) => {
           quantity: Number(row.quantity),
           name: row.name,
           picture: row.picture,
-          unitPrice: Number(row.price),
+          unitPrice: getDiscountedUnitPrice(row.price, row.discount_percentage),
         });
       }
     }

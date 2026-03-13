@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { logout } from '../lib/auth';
-import { userAPI, orderAPI } from '../lib/api';
+import { userAPI } from '../lib/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme, useThemeMode, useAccessibility } from '../lib/theme';
 
@@ -31,10 +31,6 @@ export default function ProfileScreen({ navigation }: any) {
   const { fontScale, setFontScale, highContrast, setHighContrast, reduceMotion, setReduceMotion, getFontSize } = useAccessibility();
   const styles = createStyles(theme, getFontSize);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [orderCount, setOrderCount] = useState(0);
-  const [activeOrderCount, setActiveOrderCount] = useState(0);
-  const [favoritesCount, setFavoritesCount] = useState(0);
   const [userScanAutoOpenDetail, setUserScanAutoOpenDetail] = useState(true);
   const [showScanInfo, setShowScanInfo] = useState(false);
   const [scanInfoAnchor, setScanInfoAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -42,8 +38,6 @@ export default function ProfileScreen({ navigation }: any) {
   const scanInfoButtonRef = useRef<TouchableOpacity | null>(null);
 
   const loadUserData = async () => {
-    setLoading(true);
-
     try {
       const userData = await userAPI.getProfile();
       setUser(userData);
@@ -56,33 +50,6 @@ export default function ProfileScreen({ navigation }: any) {
         setUser(JSON.parse(userStr));
       }
     }
-
-    // Load order count from API
-    try {
-      const userOrders = await orderAPI.getMyOrders();
-      setOrderCount(userOrders.length);
-      const activeOrders = userOrders.filter(
-        (order) => order.status === 'pending' || order.status === 'processing'
-      );
-      setActiveOrderCount(activeOrders.length);
-    } catch (err) {
-      console.error('Failed to load user orders:', err);
-      setOrderCount(0);
-      setActiveOrderCount(0);
-    }
-
-    // Load favorites count
-    try {
-      const favoritesStr = await AsyncStorage.getItem('favorites');
-      if (favoritesStr) {
-        const favorites = JSON.parse(favoritesStr);
-        setFavoritesCount(favorites.length);
-      }
-    } catch (err) {
-      console.error('Failed to load favorites:', err);
-    }
-
-    setLoading(false);
   };
 
   useFocusEffect(
@@ -174,31 +141,13 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* User Info Card */}
-        <View style={styles.userCard}>
-          <View style={styles.userHeader}>
-            <View style={styles.avatar}>
-              <Ionicons name="person-outline" size={40} color="#fff" />
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.first_name || user?.name || 'Guest'}</Text>
-              <View style={styles.emailContainer}>
-                <Ionicons name="mail-outline" size={16} color="#cbd5e1" />
-                <Text style={styles.userEmail}>{user?.email || 'guest@example.com'}</Text>
-              </View>
-            </View>
+        <View style={styles.profileSummaryCard}>
+          <View style={styles.profileSummaryAvatar}>
+            <Ionicons name="person-outline" size={28} color={theme.primaryDark} />
           </View>
-
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{orderCount}</Text>
-              <Text style={styles.statLabel}>Orders</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{favoritesCount}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </View>
+          <View style={styles.profileSummaryContent}>
+            <Text style={styles.profileSummaryName}>{user?.first_name || user?.name || 'Guest'}</Text>
+            <Text style={styles.profileSummaryEmail}>{user?.email || 'guest@example.com'}</Text>
           </View>
         </View>
 
@@ -215,11 +164,6 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.menuText}>My Orders</Text>
             </View>
             <View style={styles.menuRight}>
-              {activeOrderCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{activeOrderCount}</Text>
-                </View>
-              )}
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
             </View>
           </TouchableOpacity>
@@ -429,64 +373,43 @@ const createStyles = (theme: any, getFontSize: (baseSize: number) => number) => 
     fontWeight: 'bold',
     color: theme.text,
   },
-  userCard: {
-    backgroundColor: theme.primary,
+  profileSummaryCard: {
+    backgroundColor: theme.card,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
-  },
-  userHeader: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#64748b',
+  profileSummaryAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: theme.searchBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  userInfo: {
-    marginLeft: 16,
+  profileSummaryContent: {
+    marginLeft: 14,
     flex: 1,
   },
-  userName: {
-    fontSize: getFontSize(22),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 6,
-  },
-  emailContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  userEmail: {
-    fontSize: getFontSize(14),
-    color: '#cbd5e1',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#5a6c7d',
-    borderRadius: 12,
-    padding: 16,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: getFontSize(28),
-    fontWeight: 'bold',
-    color: '#fff',
+  profileSummaryName: {
+    fontSize: getFontSize(20),
+    fontWeight: '700',
+    color: theme.text,
     marginBottom: 4,
   },
-  statLabel: {
+  profileSummaryEmail: {
+    fontSize: getFontSize(14),
+    color: theme.textSecondary,
+    marginBottom: 4,
+  },
+  profileSummaryMeta: {
     fontSize: getFontSize(13),
-    color: '#cbd5e1',
+    color: theme.textTertiary,
   },
   menuSection: {
     backgroundColor: theme.card,
@@ -599,19 +522,6 @@ const createStyles = (theme: any, getFontSize: (baseSize: number) => number) => 
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  badge: {
-    backgroundColor: theme.badgeBackground,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 24,
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: getFontSize(12),
-    fontWeight: 'bold',
   },
   themeOptions: {
     flexDirection: 'row',

@@ -23,9 +23,12 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
   const { category } = route.params;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cartItems, setCartItems] = useState<Record<string, number>>({});
+  const [cartItemIds, setCartItemIds] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadProducts();
+    loadCart();
   }, [category]);
 
   const loadProducts = async () => {
@@ -43,11 +46,57 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
     }
   };
 
+  const loadCart = async () => {
+    try {
+      const cartData = await cartAPI.getCart();
+      const cartMap: Record<string, number> = {};
+      const cartIds: Record<string, string> = {};
+
+      if (Array.isArray(cartData)) {
+        cartData.forEach((item: any) => {
+          const productId = item.product_id?.toString();
+          const cartItemId = item.id?.toString();
+          if (productId && cartItemId) {
+            cartMap[productId] = (cartMap[productId] || 0) + (item.quantity || 0);
+            cartIds[productId] = cartItemId;
+          }
+        });
+      }
+
+      setCartItems(cartMap);
+      setCartItemIds(cartIds);
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+      setCartItems({});
+      setCartItemIds({});
+    }
+  };
+
   const handleAddToCart = async (product: Product) => {
     try {
       await cartAPI.addToCart(product.id, 1);
+      await loadCart();
     } catch (error) {
       console.error('Failed to add item to cart:', error);
+    }
+  };
+
+  const handleDecreaseQuantity = async (product: Product) => {
+    try {
+      const currentQuantity = cartItems[product.id] || 0;
+      const cartItemId = cartItemIds[product.id];
+
+      if (currentQuantity <= 1) {
+        if (cartItemId) {
+          await cartAPI.removeFromCart(cartItemId);
+        }
+      } else if (cartItemId) {
+        await cartAPI.updateCartItem(cartItemId, currentQuantity - 1);
+      }
+
+      await loadCart();
+    } catch (error) {
+      console.error('Failed to decrease quantity:', error);
     }
   };
 
@@ -83,6 +132,12 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
                   <Text style={styles.hotBadgeText}>Hot</Text>
                 </View>
               )}
+              {Number(product.discount) > 0 && (
+                <View style={styles.discountBadge}>
+                  <Ionicons name="flash" size={10} color="#fff" />
+                  <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
+                </View>
+              )}
               <Image
                 source={{ uri: product.image }}
                 style={styles.productImage}
@@ -96,20 +151,57 @@ export default function CategoryProductsScreen({ route, navigation }: any) {
                   {product.name}
                 </Text>
                 <View style={styles.productFooter}>
-                  <View>
-                    <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                  <View style={styles.priceBlock}>
+                    {Number(product.discount) > 0 ? (
+                      <>
+                        <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
+                        <Text style={styles.productPrice}>
+                          €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={[styles.originalPrice, styles.originalPricePlaceholder]}>€0.00</Text>
+                        <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                      </>
+                    )}
                     <Text style={styles.stockText}>Stock {product.stock}</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.addToCartButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleAddToCart(product);
-                    }}
-                  >
-                    <Ionicons name="add" size={18} color="#fff" />
-                    <Text style={styles.addToCartText}>Add to Cart</Text>
-                  </TouchableOpacity>
+                  {cartItems[product.id] ? (
+                    <View style={styles.quantityControl}>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDecreaseQuantity(product);
+                        }}
+                      >
+                        <Ionicons name="remove" size={16} color={theme.text} />
+                      </TouchableOpacity>
+                      <View style={styles.quantityDisplay}>
+                        <Text style={styles.quantityText}>{cartItems[product.id]}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product);
+                        }}
+                      >
+                        <Ionicons name="add" size={16} color={theme.text} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.addToCartButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleAddToCart(product);
+                      }}
+                    >
+                      <Ionicons name="add" size={20} color={theme.text} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -187,6 +279,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   productImage: {
     width: '100%',
     height: 160,
@@ -213,10 +323,23 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
   },
+  priceBlock: {
+    minHeight: 48,
+    justifyContent: 'flex-end',
+  },
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.text,
+    color: theme.priceText,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  originalPricePlaceholder: {
+    opacity: 0,
   },
   stockText: {
     fontSize: 10,
@@ -224,17 +347,42 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 2,
   },
   addToCartButton: {
-    flexDirection: 'row',
-    backgroundColor: theme.primaryDark,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 18,
+    paddingHorizontal: 4,
     gap: 4,
   },
-  addToCartText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
+  quantityButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityDisplay: {
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  quantityText: {
+    color: theme.text,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

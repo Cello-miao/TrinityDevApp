@@ -77,6 +77,7 @@ describe('product.controller', () => {
         'A',
         { label: 'Sucre élevé' },
         10,
+        0,
       ],
     );
     expect(res.status).toHaveBeenCalledWith(201);

@@ -13,6 +13,7 @@ const scannerRoutes = require("./routes/scanner.routes");
 const orderRoutes = require("./routes/order.routes");
 const openfoodfactsRoutes = require("./routes/openfoodfacts.routes");
 const paypalRoutes = require("./routes/paypal.routes");
+const favoritesRoutes = require("./routes/favorites.routes");
 
 const isProduction = process.env.NODE_ENV === "production";
 const corsOrigins = (process.env.CORS_ORIGINS || "")
@@ -77,6 +78,7 @@ app.use("/api/scanner", scannerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/openfoodfacts", openfoodfactsRoutes);
 app.use("/api/paypal", paypalRoutes);
+app.use("/api/favorites", favoritesRoutes);
 
 // Test route
 app.get("/api/test", (req, res) => {

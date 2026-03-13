@@ -30,6 +30,7 @@ export default function HomeScreen({ navigation }: any) {
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [cartItemIds, setCartItemIds] = useState<Record<string, string>>({});
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +45,10 @@ export default function HomeScreen({ navigation }: any) {
 
   useEffect(() => {
     if (products.length > 0) {
-      loadRecommendations();
+      // Only load recommendations if not already loaded
+      if (recommendedProducts.length === 0) {
+        loadRecommendations();
+      }
       generateDynamicCategories();
     }
   }, [products]);
@@ -139,9 +143,31 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
+  const refreshRecommendations = async () => {
+    setIsLoadingRecommendations(true);
+    await loadRecommendations();
+    setIsLoadingRecommendations(false);
+  };
+
   const loadRecommendations = async () => {
     try {
-      // Load order history
+      // Try to load recommendations from backend API first
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, get personalized recommendations from backend
+        try {
+          const recommendations = await productAPI.getRecommendations(6);
+          setRecommendedProducts(recommendations);
+          return;
+        } catch (error) {
+          console.log('Failed to load backend recommendations, falling back to local logic:', error);
+          // Fall through to local logic if backend fails
+        }
+      }
+
+      // Fallback: Local recommendation logic (for guests or if backend fails)
+      // Load order history from local storage
       const ordersStr = await AsyncStorage.getItem('orders');
       
       if (ordersStr) {
@@ -291,31 +317,22 @@ export default function HomeScreen({ navigation }: any) {
           </View>
 
           {/* Main Promo Banner */}
-          <ImageBackground
-            source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800' }}
-            style={styles.mainPromo}
-            imageStyle={{ borderRadius: 12 }}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('PromoProducts')}
           >
-            <View style={styles.promoOverlay}>
-              <Text style={styles.promoTitle}>Weekend Special</Text>
-              <Text style={styles.promoSubtitle}>Up to 30% Off</Text>
-              <Text style={styles.promoDescription}>Fresh products</Text>
-            </View>
-          </ImageBackground>
-
-          {/* Small Promo Cards */}
-          <View style={styles.smallPromosContainer}>
-            <View style={styles.smallPromo}>
-              <Text style={styles.smallPromoTitle}>New Members</Text>
-              <Text style={styles.smallPromoSubtitle}>€5 off first order</Text>
-              <Text style={styles.smallPromoDesc}>Use code: HELLO</Text>
-            </View>
-            <View style={styles.smallPromo}>
-              <Text style={styles.smallPromoTitle}>Free Delivery</Text>
-              <Text style={styles.smallPromoSubtitle}>On orders over €30</Text>
-              <Text style={styles.smallPromoDesc}>Save on shipping</Text>
-            </View>
-          </View>
+            <ImageBackground
+              source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800' }}
+              style={styles.mainPromo}
+              imageStyle={{ borderRadius: 12 }}
+            >
+              <View style={styles.promoOverlay}>
+                <Text style={styles.promoTitle}>Promotional Products</Text>
+                {/* <Text style={styles.promoSubtitle}>Up to 50% Off</Text> */}
+                <Text style={styles.promoDescription}>Tap to view discounted items</Text>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
         </View>
 
         {/* Shop by Category */}
@@ -350,9 +367,21 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* Recommended for You */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="star" size={18} color="#1e293b" />
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
+          <View style={styles.sectionHeaderWithAction}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star" size={18} color="#1e293b" />
+              <Text style={styles.sectionTitle}>Recommended for You</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={refreshRecommendations}
+              disabled={isLoadingRecommendations}
+            >
+              <Ionicons 
+                name="refresh" 
+                size={20} 
+                color={isLoadingRecommendations ? "#cbd5e1" : "#64748b"} 
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.productsGrid}>
@@ -367,6 +396,12 @@ export default function HomeScreen({ navigation }: any) {
                     <Text style={styles.hotBadgeText}>Hot</Text>
                   </View>
                 )}
+                {Number(product.discount) > 0 && (
+                  <View style={styles.discountBadge}>
+                    <Ionicons name="flash" size={10} color="#fff" />
+                    <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
+                  </View>
+                )}
                 <Image
                   source={{ uri: product.image }}
                   style={styles.productImage}
@@ -378,8 +413,20 @@ export default function HomeScreen({ navigation }: any) {
                     {product.name}
                   </Text>
                   <View style={styles.productFooter}>
-                    <View>
-                      <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                    <View style={styles.priceBlock}>
+                      {Number(product.discount) > 0 ? (
+                        <>
+                          <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
+                          <Text style={styles.productPrice}>
+                            €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={[styles.originalPrice, styles.originalPricePlaceholder]}>€0.00</Text>
+                          <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                        </>
+                      )}
                       <Text style={styles.stockText}>Stock {product.stock}</Text>
                     </View>
                     {cartItems[product.id] ? (
@@ -388,7 +435,7 @@ export default function HomeScreen({ navigation }: any) {
                           style={styles.quantityButton}
                           onPress={() => handleDecreaseQuantity(product)}
                         >
-                          <Ionicons name="remove" size={16} color="#fff" />
+                          <Ionicons name="remove" size={16} color={theme.text} />
                         </TouchableOpacity>
                         <View style={styles.quantityDisplay}>
                           <Text style={styles.quantityText}>{cartItems[product.id]}</Text>
@@ -397,7 +444,7 @@ export default function HomeScreen({ navigation }: any) {
                           style={styles.quantityButton}
                           onPress={() => handleAddToCart(product)}
                         >
-                          <Ionicons name="add" size={16} color="#fff" />
+                          <Ionicons name="add" size={16} color={theme.text} />
                         </TouchableOpacity>
                       </View>
                     ) : (
@@ -405,7 +452,7 @@ export default function HomeScreen({ navigation }: any) {
                         style={styles.addToCartButton}
                         onPress={() => handleAddToCart(product)}
                       >
-                        <Ionicons name="add" size={20} color="#fff" />
+                        <Ionicons name="add" size={20} color={theme.text} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -559,32 +606,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: '#e2e8f0',
     fontSize: 14,
   },
-  smallPromosContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  smallPromo: {
-    flex: 1,
-    backgroundColor: theme.primary,
-    padding: 16,
-    borderRadius: 8,
-  },
-  smallPromoTitle: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  smallPromoSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  smallPromoDesc: {
-    color: '#94a3b8',
-    fontSize: 11,
-  },
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -638,6 +659,24 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
+  discountBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   productImage: {
     width: '100%',
     height: 140,
@@ -662,10 +701,23 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  priceBlock: {
+    minHeight: 48,
+    justifyContent: 'flex-end',
+  },
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
     color: theme.priceText,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  originalPricePlaceholder: {
+    opacity: 0,
   },
   stockText: {
     fontSize: 10,
@@ -673,7 +725,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 2,
   },
   addToCartButton: {
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -683,7 +737,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
     borderRadius: 18,
     paddingHorizontal: 4,
     gap: 4,
@@ -692,7 +748,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -703,7 +759,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 6,
   },
   quantityText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 14,
     fontWeight: 'bold',
   },

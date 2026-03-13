@@ -153,10 +153,6 @@ export default function OrderHistoryScreen({ navigation }: any) {
     }
   };
 
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
-
   if (orders.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -183,25 +179,6 @@ export default function OrderHistoryScreen({ navigation }: any) {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Order Statistics */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Order Statistics</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Total Orders</Text>
-              <Text style={styles.statValue}>{totalOrders}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Completed</Text>
-              <Text style={styles.statValue}>{completedOrders}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Total Spent</Text>
-              <Text style={styles.statValue}>€{totalSpent.toFixed(0)}</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Orders List */}
         {orders.map((order) => {
           const isExpanded = expandedOrders.has(order.id);
@@ -214,7 +191,9 @@ export default function OrderHistoryScreen({ navigation }: any) {
                 onPress={() => toggleOrderExpansion(order.id)}
               >
                 <View style={styles.orderHeaderLeft}>
-                  <Text style={styles.orderId}>ORD-{order.id.slice(0, 3)}</Text>
+                  <Text style={styles.orderId}>
+                    #{order.id.replace(/^ORD-/, '').slice(-8)}
+                  </Text>
                   <View style={styles.completedBadge}>
                     <Text style={styles.completedText}>Completed</Text>
                   </View>
@@ -331,37 +310,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  statsCard: {
-    backgroundColor: theme.primary,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    padding: 20,
-    borderRadius: 16,
-  },
-  statsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: '#cbd5e1',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   orderCard: {
     backgroundColor: theme.card,

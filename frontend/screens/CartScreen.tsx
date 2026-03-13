@@ -44,6 +44,7 @@ export default function CartScreen({ navigation }: any) {
             id: item.product_id?.toString() || '',
             name: item.name || 'Unknown Product',
             price: parseFloat(item.price) || 0,
+            discount: parseFloat(item.discount_percentage) || 0,
             image: item.picture || '',
             category: '',
             description: '',
@@ -145,8 +146,16 @@ export default function CartScreen({ navigation }: any) {
     }
   };
 
+  const getDiscountedPrice = (product: Product) => {
+    const discount = product.discount || 0;
+    if (discount <= 0) {
+      return product.price;
+    }
+    return product.price * (1 - discount / 100);
+  };
+
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + getDiscountedPrice(item.product) * item.quantity,
     0
   );
 
@@ -201,9 +210,22 @@ export default function CartScreen({ navigation }: any) {
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{item.product.name}</Text>
               <Text style={styles.productVendor}>Artisan Bakery</Text>
-              <Text style={styles.productPrice}>
-                €{item.product.price.toFixed(2)}
-              </Text>
+              {Number(item.product.discount) > 0 ? (
+                <View style={styles.priceWrap}>
+                  <Text style={styles.originalPrice}>€{item.product.price.toFixed(2)}</Text>
+                  <View style={styles.discountedPriceRow}>
+                    <Text style={styles.discountedPrice}>€{getDiscountedPrice(item.product).toFixed(2)}</Text>
+                    <View style={styles.discountBadge}>
+                      <Ionicons name="flash" size={10} color="#fff" />
+                      <Text style={styles.discountBadgeText}>{`${Math.round(item.product.discount || 0)}%`}</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.productPrice}>
+                  €{item.product.price.toFixed(2)}
+                </Text>
+              )}
               
               {/* Quantity Controls */}
               <View style={styles.quantityContainer}>
@@ -232,31 +254,33 @@ export default function CartScreen({ navigation }: any) {
           </View>
         ))}
 
-        {/* Price Details */}
-        <View style={styles.priceSection}>
-          <Text style={styles.priceSectionTitle}>Price Details</Text>
-          
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>€{subtotal.toFixed(2)}</Text>
+        <View style={styles.summaryCard}>
+          {/* Price Details */}
+          <View style={styles.priceSection}>
+            <Text style={styles.priceSectionTitle}>Price Details</Text>
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Subtotal</Text>
+              <Text style={styles.priceValue}>€{subtotal.toFixed(2)}</Text>
+            </View>
+            
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Delivery Fee</Text>
+              <Text style={styles.priceValue}>€{deliveryFee.toFixed(2)}</Text>
+            </View>
+            
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
+            </View>
           </View>
-          
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Delivery Fee</Text>
-            <Text style={styles.priceValue}>€{deliveryFee.toFixed(2)}</Text>
-          </View>
-          
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
-          </View>
-        </View>
 
-        {/* Special Offers */}
-        <View style={styles.specialOffersSection}>
-          <Text style={styles.specialOffersTitle}>Special Offers</Text>
-          <Text style={styles.offerText}>• Free delivery on orders over €{FREE_DELIVERY_THRESHOLD.toFixed(0)}</Text>
-          <Text style={styles.offerText}>• €{DISCOUNT_AMOUNT.toFixed(0)} off on orders over €{DISCOUNT_THRESHOLD.toFixed(0)}</Text>
+          {/* Special Offers */}
+          <View style={styles.specialOffersSection}>
+            <Text style={styles.specialOffersTitle}>Special Offers</Text>
+            <Text style={styles.offerText}>• Free delivery on orders over €{FREE_DELIVERY_THRESHOLD.toFixed(0)}</Text>
+            <Text style={styles.offerText}>• €{DISCOUNT_AMOUNT.toFixed(0)} off on orders over €{DISCOUNT_THRESHOLD.toFixed(0)}</Text>
+          </View>
         </View>
 
         <View style={{ height: 100 }} />
@@ -312,13 +336,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 24,
   },
   shopButton: {
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
   },
   shopButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -342,10 +368,13 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   cartItem: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 16,
   },
   productImage: {
     width: 90,
@@ -374,6 +403,39 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
     marginBottom: 8,
+  },
+  priceWrap: {
+    marginBottom: 8,
+  },
+  originalPrice: {
+    fontSize: 13,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  discountedPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.success,
+  },
+  discountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.warning,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   deleteButton: {
     padding: 8,
@@ -405,9 +467,18 @@ const createStyles = (theme: any) => StyleSheet.create({
     minWidth: 36,
     textAlign: 'center',
   },
-  priceSection: {
+  summaryCard: {
     marginHorizontal: 16,
     marginTop: 24,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  priceSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
@@ -451,8 +522,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   specialOffersSection: {
-    marginHorizontal: 16,
-    marginTop: 24,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   specialOffersTitle: {
     fontSize: 18,
@@ -478,7 +550,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 12,
   },
   checkoutButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -487,12 +561,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: 12,
   },
   checkoutButtonText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 16,
     fontWeight: '700',
   },
   checkoutButtonPrice: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 18,
     fontWeight: 'bold',
   },});

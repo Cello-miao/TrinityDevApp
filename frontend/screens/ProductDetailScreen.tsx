@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../types';
-import { cartAPI } from '../lib/api';
+import { cartAPI, favoritesAPI } from '../lib/api';
 import { useTheme } from '../lib/theme';
 
 export default function ProductDetailScreen({ route, navigation }: any) {
@@ -32,6 +32,20 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const checkFavoriteStatus = async () => {
     try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, check backend
+        try {
+          const isFav = await favoritesAPI.checkFavorite(product.id);
+          setIsFavorite(isFav);
+          return;
+        } catch (error) {
+          console.log('Failed to check backend favorites, using local storage:', error);
+        }
+      }
+
+      // Fallback to local storage for guests or if backend fails
       const favoritesStr = await AsyncStorage.getItem('favorites');
       if (favoritesStr) {
         const favorites = JSON.parse(favoritesStr);
@@ -70,6 +84,24 @@ export default function ProductDetailScreen({ route, navigation }: any) {
 
   const toggleFavorite = async () => {
     try {
+      const token = await AsyncStorage.getItem('token');
+      
+      if (token) {
+        // User is logged in, use backend API
+        try {
+          if (isFavorite) {
+            await favoritesAPI.removeFavorite(product.id);
+          } else {
+            await favoritesAPI.addFavorite(product.id);
+          }
+          setIsFavorite(!isFavorite);
+          return;
+        } catch (error) {
+          console.log('Failed to sync with backend, using local storage:', error);
+        }
+      }
+
+      // Fallback to local storage for guests or if backend fails
       const favoritesStr = await AsyncStorage.getItem('favorites');
       let favorites = favoritesStr ? JSON.parse(favoritesStr) : [];
       
@@ -101,6 +133,43 @@ export default function ProductDetailScreen({ route, navigation }: any) {
     }
   };
 
+  const handleIncreaseQuantity = async () => {
+    try {
+      if (cartItemId) {
+        // Already in cart, increase by 1
+        const newQuantity = cartQuantity + 1;
+        if (newQuantity <= product.stock) {
+          await cartAPI.updateCartItem(cartItemId, newQuantity);
+          await loadCartQuantity();
+        }
+      } else {
+        // Not in cart yet, add 1
+        await cartAPI.addToCart(product.id, 1);
+        await loadCartQuantity();
+      }
+    } catch (error) {
+      console.error('Failed to increase quantity:', error);
+    }
+  };
+
+  const handleDecreaseQuantity = async () => {
+    try {
+      if (cartItemId && cartQuantity > 0) {
+        if (cartQuantity <= 1) {
+          // Remove from cart if quantity is 1
+          await cartAPI.removeFromCart(cartItemId);
+          await loadCartQuantity();
+        } else {
+          // Decrease quantity
+          await cartAPI.updateCartItem(cartItemId, cartQuantity - 1);
+          await loadCartQuantity();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to decrease quantity:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView>
@@ -124,9 +193,9 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           
           <View style={styles.priceContainer}>
             <Text style={styles.price}>€{product.price.toFixed(2)}</Text>
-            {product.discount && (
+            {Number(product.discount) > 0 && (
               <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>-{product.discount}%</Text>
+                <Text style={styles.discountText}>{`-${Math.round(product.discount || 0)}%`}</Text>
               </View>
             )}
           </View>
@@ -194,17 +263,19 @@ export default function ProductDetailScreen({ route, navigation }: any) {
       <View style={styles.bottomBar}>
         <View style={styles.quantityContainer}>
           <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => setQuantity(Math.max(1, quantity - 1))}
+            style={[styles.quantityButton, cartQuantity === 0 && styles.quantityButtonDisabled]}
+            onPress={handleDecreaseQuantity}
+            disabled={cartQuantity === 0}
           >
-            <Ionicons name="remove" size={20} color="#475569" />
+            <Ionicons name="remove" size={20} color={cartQuantity === 0 ? "#cbd5e1" : "#475569"} />
           </TouchableOpacity>
-          <Text style={styles.quantity}>{quantity}</Text>
+          <Text style={styles.quantity}>{cartQuantity}</Text>
           <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => setQuantity(Math.min(product.stock, quantity + 1))}
+            style={[styles.quantityButton, cartQuantity >= product.stock && styles.quantityButtonDisabled]}
+            onPress={handleIncreaseQuantity}
+            disabled={product.stock === 0 || cartQuantity >= product.stock}
           >
-            <Ionicons name="add" size={20} color="#475569" />
+            <Ionicons name="add" size={20} color={product.stock === 0 || cartQuantity >= product.stock ? "#cbd5e1" : "#475569"} />
           </TouchableOpacity>
         </View>
 
@@ -213,8 +284,10 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           onPress={handleAddToCart}
           disabled={product.stock === 0}
         >
-          <Ionicons name="cart" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add to Cart</Text>
+          <Ionicons name="cart" size={20} color={theme.text} />
+          <Text style={styles.addButtonText}>
+            {cartQuantity > 0 ? 'Update Cart' : 'Add to Cart'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -368,7 +441,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   addButton: {
     flex: 1,
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -376,11 +451,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   addButtonDisabled: {
-    backgroundColor: theme.textSecondary,
+    backgroundColor: theme.searchBackground,
+    borderColor: theme.border,
   },
   addButtonText: {
-    color: theme.buttonText,
+    color: theme.text,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  quantityButtonDisabled: {
+    opacity: 0.5,
   },
 });

@@ -55,6 +55,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     barcode: '',
     image: '',
     stock: '100',
+    discount: '0',
   });
 
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       barcode: product.barcode || '',
       image: product.image || '',
       stock: product.stock.toString(),
+      discount: (product.discount || 0).toString(),
     });
     setIsAddModalVisible(true);
   };
@@ -290,6 +292,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         barcode: normalizedBarcode,
         image: newProduct.image || 'https://via.placeholder.com/150',
         stock: parseInt(newProduct.stock) || 0,
+        discount: parseFloat(newProduct.discount) || 0,
       };
 
       if (editingProductId) {
@@ -310,6 +313,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         barcode: '',
         image: '',
         stock: '100',
+        discount: '0',
       });
       loadProducts();
     } catch (error) {
@@ -399,7 +403,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               setIsImportModalVisible(true);
             }}
           >
-            <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+            <Ionicons name="cloud-upload-outline" size={20} color={theme.primaryDark} />
             <Text style={styles.importButtonText}>Import</Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -414,11 +418,12 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 barcode: '',
                 image: '',
                 stock: '100',
+                discount: '0',
               });
               setIsAddModalVisible(true);
             }}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color={theme.primaryDark} />
             <Text style={styles.addButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
@@ -426,10 +431,18 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
         {/* Products List */}
         {filteredProducts.map((product) => (
           <View key={product.id} style={styles.productCard}>
-            <Image
-              source={{ uri: product.image || 'https://via.placeholder.com/150' }}
-              style={styles.productImage}
-            />
+            <View style={styles.productImageContainer}>
+              {Number(product.discount) > 0 && (
+                <View style={styles.discountBadge}>
+                  <Ionicons name="flash" size={10} color="#fff" />
+                  <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
+                </View>
+              )}
+              <Image
+                source={{ uri: product.image || 'https://via.placeholder.com/150' }}
+                style={styles.productImage}
+              />
+            </View>
             <View style={styles.productContent}>
               <View style={styles.productHeader}>
                 <View style={styles.productLeft}>
@@ -437,7 +450,16 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>{getCategoryName(product.category)}</Text>
                   </View>
-                  <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                  {Number(product.discount) > 0 ? (
+                    <View style={styles.priceWrap}>
+                      <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
+                      <Text style={styles.discountedPrice}>
+                        €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
+                  )}
                   <Text style={styles.productBarcode}>
                     {product.barcode || 'No barcode'}
                   </Text>
@@ -452,7 +474,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   style={styles.editButton}
                   onPress={() => handleEdit(product)}
                 >
-                  <Ionicons name="pencil-outline" size={16} color="#475569" />
+                  <Ionicons name="pencil-outline" size={16} color={theme.primaryDark} />
                   <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -505,7 +527,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                       accessibilityLabel="Scan barcode"
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Ionicons name="scan-outline" size={18} color="#fff" />
+                      <Ionicons name="scan-outline" size={18} color={theme.primaryDark} />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.fetchButton}
@@ -515,7 +537,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                       accessibilityLabel="Fetch product data by barcode"
                     >
                       {isFetchingBarcode ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={theme.primaryDark} />
                       ) : (
                         <Text style={styles.fetchButtonText}>Fetch Data</Text>
                       )}
@@ -568,6 +590,18 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               </View>
 
               <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Discount (%)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  value={newProduct.discount}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, discount: text })}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.inputHint}>Enter discount percentage (0-100)</Text>
+              </View>
+
+              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Image</Text>
                 <View style={styles.imageInputContainer}>
                   <TextInput
@@ -580,7 +614,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                     style={styles.imagePickerButton}
                     onPress={pickImage}
                   >
-                    <Ionicons name="image-outline" size={20} color="#fff" />
+                    <Ionicons name="image-outline" size={20} color={theme.info} />
                   </TouchableOpacity>
                 </View>
                 {newProduct.image ? (
@@ -617,7 +651,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 disabled={isSavingProduct}
               >
                 {isSavingProduct ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={theme.primaryDark} />
                 ) : (
                   <Text style={styles.saveButtonText}>{editingProductId ? 'Update Product' : 'Save Product'}</Text>
                 )}
@@ -672,9 +706,9 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 disabled={isSearchingImport}
               >
                 {isSearchingImport ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={theme.primaryDark} />
                 ) : (
-                  <Ionicons name="search" size={20} color="#fff" />
+                  <Ionicons name="search" size={20} color={theme.primaryDark} />
                 )}
               </TouchableOpacity>
             </View>
@@ -699,7 +733,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                     onPress={() => handleImportProduct(item)}
                     disabled={isImporting}
                   >
-                    <Ionicons name="download-outline" size={20} color="#fff" />
+                    <Ionicons name="download-outline" size={20} color={theme.info} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -749,13 +783,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingVertical: 14,
     borderRadius: 8,
     gap: 8,
   },
   importButtonText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -764,13 +800,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingVertical: 14,
     borderRadius: 8,
     gap: 8,
   },
   addButtonText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -790,6 +828,27 @@ const createStyles = (theme: any) => StyleSheet.create({
     height: 100,
     borderRadius: 8,
     backgroundColor: theme.inputBackground,
+  },
+  productImageContainer: {
+    position: 'relative',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   productContent: {
     flex: 1,
@@ -835,6 +894,20 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
     marginBottom: 4,
   },
+  priceWrap: {
+    marginBottom: 4,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: theme.textTertiary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.success,
+  },
   productBarcode: {
     fontSize: 13,
     color: theme.textTertiary,
@@ -863,8 +936,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   editButtonText: {
     fontSize: 14,
-    color: theme.primary,
-    fontWeight: '500',
+    color: theme.primaryDark,
+    fontWeight: '600',
   },
   deleteButton: {
     flexDirection: 'row',
@@ -921,6 +994,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.primary,
     marginBottom: 8,
   },
+  inputHint: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
+  },
   input: {
     backgroundColor: theme.inputBackground,
     borderWidth: 1,
@@ -945,7 +1023,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   fetchButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -953,12 +1033,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     minWidth: 100,
   },
   fetchButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontWeight: '600',
     fontSize: 14,
   },
   scanButton: {
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -975,7 +1057,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 10,
   },
   imagePickerButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1011,13 +1095,15 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1065,7 +1151,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   importSearchButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 50,
     height: 48,
     borderRadius: 8,
@@ -1105,7 +1193,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.textSecondary,
   },
   importResultButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 40,
     height: 40,
     borderRadius: 20,

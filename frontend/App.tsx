@@ -31,6 +31,7 @@ import AdminOrdersScreen from './screens/AdminOrdersScreen';
 import AdminCustomersScreen from './screens/AdminCustomersScreen';
 import AdminProfileScreen from './screens/AdminProfileScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
+import PromoProductsScreen from './screens/PromoProductsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -59,8 +60,8 @@ function MainTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textTertiary,
+        tabBarActiveTintColor: theme.primaryDark,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.surface,
           borderTopColor: theme.border,
@@ -121,8 +122,8 @@ function AdminTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textTertiary,
+        tabBarActiveTintColor: theme.primaryDark,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.surface,
           borderTopColor: theme.border,
@@ -219,6 +220,11 @@ function AppContent() {
             name="ProductDetail" 
             component={ProductDetailScreen}
             options={{ title: 'Product Details' }}
+          />
+          <Stack.Screen 
+            name="PromoProducts" 
+            component={PromoProductsScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen 
             name="Checkout" 

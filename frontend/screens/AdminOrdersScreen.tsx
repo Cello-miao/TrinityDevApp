@@ -85,6 +85,10 @@ export default function AdminOrdersScreen({ navigation }: any) {
     return status;
   };
 
+  const formatOrderId = (orderId: string) => {
+    return `#${orderId.replace(/^ORD-/, '').slice(-8)}`;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -127,7 +131,7 @@ export default function AdminOrdersScreen({ navigation }: any) {
             >
               <View style={styles.orderHeader}>
                 <View style={styles.orderHeaderLeft}>
-                  <Text style={styles.orderId}>#{order.id}</Text>
+                  <Text style={styles.orderId}>{formatOrderId(order.id)}</Text>
                   <View style={[
                     styles.statusBadge,
                     { backgroundColor: getStatusColor(order.status) }
@@ -142,13 +146,19 @@ export default function AdminOrdersScreen({ navigation }: any) {
                 </View>
                 <View style={styles.orderHeaderRight}>
                   <Text style={styles.orderTotal}>€{order.total.toFixed(2)}</Text>
-                  <Text style={styles.itemCount}>{itemCount} items</Text>
                 </View>
               </View>
 
-              <Text style={styles.orderDate}>
-                {new Date(order.createdAt).toISOString().split('T')[0]}
-              </Text>
+              <View style={styles.orderMetaRow}>
+                <Text style={styles.orderDate}>
+                  {new Date(order.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                  }).replace(/\//g, '-')}
+                </Text>
+                <Text style={styles.itemCount}>{itemCount} items</Text>
+              </View>
 
               <View style={styles.customerInfo}>
                 <Text style={styles.customerName}>{order.customerName}</Text>
@@ -206,17 +216,21 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 4,
+    gap: 8,
   },
   orderHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    flex: 1,
+    paddingRight: 8,
   },
   orderId: {
     fontSize: 16,
     fontWeight: '700',
     color: theme.text,
+    flexShrink: 1,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -229,12 +243,19 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   orderHeaderRight: {
     alignItems: 'flex-end',
+    minWidth: 92,
+  },
+  orderMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   orderTotal: {
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.text,
-    marginBottom: 4,
+    lineHeight: 24,
   },
   itemCount: {
     fontSize: 13,
@@ -243,7 +264,6 @@ const createStyles = (theme: any) => StyleSheet.create({
   orderDate: {
     fontSize: 13,
     color: theme.textSecondary,
-    marginBottom: 12,
   },
   customerInfo: {
     marginTop: 4,
