@@ -63,91 +63,92 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/trinitydevapp-backend:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/trinitydevapp-backend:latest
 
-  deploy-to-ec2-http:
-    name: Deploy to EC2 (HTTP Temp)
-    runs-on: ubuntu-latest
-    needs: build-and-push-backend-image
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/prod')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+  # Final EC2 deployment is temporarily disabled on dev.
+  # deploy-to-ec2-http:
+  #   name: Deploy to EC2 (HTTP Temp)
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push-backend-image
+  #   if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/prod')
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
 
-      - name: Copy deployment files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.http.yml,database/schema.sql,.env"
-          target: "~/trinity-deploy"
+  #     - name: Copy deployment files to EC2
+  #       uses: appleboy/scp-action@v0.1.7
+  #       with:
+  #         host: ${{ secrets.EC2_HOST }}
+  #         username: ${{ secrets.EC2_USER }}
+  #         key: ${{ secrets.EC2_SSH_KEY }}
+  #         source: "docker-compose.http.yml,database/schema.sql,.env"
+  #         target: "~/trinity-deploy"
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          IMAGE_TAG: ${{ github.sha }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
-          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
-          PAYPAL_MODE: ${{ secrets.PAYPAL_MODE }}
-          PAYPAL_RETURN_URL: ${{ secrets.PAYPAL_RETURN_URL }}
-          PAYPAL_CANCEL_URL: ${{ secrets.PAYPAL_CANCEL_URL }}
-          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DOCKERHUB_USERNAME,IMAGE_TAG,DB_USER,DB_PASSWORD,DB_NAME,DB_PORT,JWT_SECRET,PAYPAL_CLIENT_ID,PAYPAL_CLIENT_SECRET,PAYPAL_MODE,PAYPAL_RETURN_URL,PAYPAL_CANCEL_URL,CORS_ORIGINS
-          script: |
-            set -e
-            mkdir -p ~/trinity-deploy
-            cd ~/trinity-deploy
+  #     - name: Deploy over SSH
+  #       uses: appleboy/ssh-action@v1.2.0
+  #       env:
+  #         DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         IMAGE_TAG: ${{ github.sha }}
+  #         DB_USER: ${{ secrets.DB_USER }}
+  #         DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  #         DB_NAME: ${{ secrets.DB_NAME }}
+  #         DB_PORT: ${{ secrets.DB_PORT }}
+  #         JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  #         PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
+  #         PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
+  #         PAYPAL_MODE: ${{ secrets.PAYPAL_MODE }}
+  #         PAYPAL_RETURN_URL: ${{ secrets.PAYPAL_RETURN_URL }}
+  #         PAYPAL_CANCEL_URL: ${{ secrets.PAYPAL_CANCEL_URL }}
+  #         CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+  #       with:
+  #         host: ${{ secrets.EC2_HOST }}
+  #         username: ${{ secrets.EC2_USER }}
+  #         key: ${{ secrets.EC2_SSH_KEY }}
+  #         envs: DOCKERHUB_USERNAME,IMAGE_TAG,DB_USER,DB_PASSWORD,DB_NAME,DB_PORT,JWT_SECRET,PAYPAL_CLIENT_ID,PAYPAL_CLIENT_SECRET,PAYPAL_MODE,PAYPAL_RETURN_URL,PAYPAL_CANCEL_URL,CORS_ORIGINS
+  #         script: |
+  #           set -e
+  #           mkdir -p ~/trinity-deploy
+  #           cd ~/trinity-deploy
 
-            cp database/schema.sql ./schema.sql
+  #           cp database/schema.sql ./schema.sql
 
-            if [ -f docker-compose.http.yml ]; then
-              echo "Using docker-compose.http.yml from repo root"
-            else
-              echo "docker-compose.http.yml not found after file copy"
-              exit 1
-            fi
+  #           if [ -f docker-compose.http.yml ]; then
+  #             echo "Using docker-compose.http.yml from repo root"
+  #           else
+  #             echo "docker-compose.http.yml not found after file copy"
+  #             exit 1
+  #           fi
 
-            if [ -f .env ]; then
-              echo "Using .env from repository"
-            else
-              echo ".env not found after file copy"
-              exit 1
-            fi
+  #           if [ -f .env ]; then
+  #             echo "Using .env from repository"
+  #           else
+  #             echo ".env not found after file copy"
+  #             exit 1
+  #           fi
 
-            # Upsert all secrets into .env so the container gets correct runtime config
-            upsert_env() {
-              local key="$1" val="$2"
-              if grep -q "^${key}=" .env; then
-                sed -i "s|^${key}=.*|${key}=${val}|" .env
-              else
-                echo "${key}=${val}" >> .env
-              fi
-            }
+  #           # Upsert all secrets into .env so the container gets correct runtime config
+  #           upsert_env() {
+  #             local key="$1" val="$2"
+  #             if grep -q "^${key}=" .env; then
+  #               sed -i "s|^${key}=.*|${key}=${val}|" .env
+  #             else
+  #               echo "${key}=${val}" >> .env
+  #             fi
+  #           }
 
-            upsert_env DOCKERHUB_USERNAME "${DOCKERHUB_USERNAME}"
-            upsert_env IMAGE_TAG          "${IMAGE_TAG}"
-            upsert_env DB_USER            "${DB_USER}"
-            upsert_env DB_PASSWORD        "${DB_PASSWORD}"
-            upsert_env DB_NAME            "${DB_NAME}"
-            upsert_env DB_PORT            "${DB_PORT}"
-            upsert_env JWT_SECRET         "${JWT_SECRET}"
-            upsert_env PAYPAL_CLIENT_ID   "${PAYPAL_CLIENT_ID}"
-            upsert_env PAYPAL_CLIENT_SECRET "${PAYPAL_CLIENT_SECRET}"
-            upsert_env PAYPAL_MODE        "${PAYPAL_MODE}"
-            upsert_env PAYPAL_RETURN_URL  "${PAYPAL_RETURN_URL}"
-            upsert_env PAYPAL_CANCEL_URL  "${PAYPAL_CANCEL_URL}"
-            upsert_env CORS_ORIGINS       "${CORS_ORIGINS}"
+  #           upsert_env DOCKERHUB_USERNAME "${DOCKERHUB_USERNAME}"
+  #           upsert_env IMAGE_TAG          "${IMAGE_TAG}"
+  #           upsert_env DB_USER            "${DB_USER}"
+  #           upsert_env DB_PASSWORD        "${DB_PASSWORD}"
+  #           upsert_env DB_NAME            "${DB_NAME}"
+  #           upsert_env DB_PORT            "${DB_PORT}"
+  #           upsert_env JWT_SECRET         "${JWT_SECRET}"
+  #           upsert_env PAYPAL_CLIENT_ID   "${PAYPAL_CLIENT_ID}"
+  #           upsert_env PAYPAL_CLIENT_SECRET "${PAYPAL_CLIENT_SECRET}"
+  #           upsert_env PAYPAL_MODE        "${PAYPAL_MODE}"
+  #           upsert_env PAYPAL_RETURN_URL  "${PAYPAL_RETURN_URL}"
+  #           upsert_env PAYPAL_CANCEL_URL  "${PAYPAL_CANCEL_URL}"
+  #           upsert_env CORS_ORIGINS       "${CORS_ORIGINS}"
 
-            docker compose -f docker-compose.http.yml --env-file .env pull
-            docker compose -f docker-compose.http.yml --env-file .env up -d --remove-orphans
-            sleep 5
-            curl -fsS http://127.0.0.1/api/test
+  #           docker compose -f docker-compose.http.yml --env-file .env pull
+  #           docker compose -f docker-compose.http.yml --env-file .env up -d --remove-orphans
+  #           sleep 5
+  #           curl -fsS http://127.0.0.1/api/test
