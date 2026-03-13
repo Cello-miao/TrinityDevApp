@@ -213,13 +213,15 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   shopButton: {
     marginTop: 24,
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   shopButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontSize: 16,
     fontWeight: '600',
   },

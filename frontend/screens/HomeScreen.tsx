@@ -435,7 +435,7 @@ export default function HomeScreen({ navigation }: any) {
                           style={styles.quantityButton}
                           onPress={() => handleDecreaseQuantity(product)}
                         >
-                          <Ionicons name="remove" size={16} color="#fff" />
+                          <Ionicons name="remove" size={16} color={theme.text} />
                         </TouchableOpacity>
                         <View style={styles.quantityDisplay}>
                           <Text style={styles.quantityText}>{cartItems[product.id]}</Text>
@@ -444,7 +444,7 @@ export default function HomeScreen({ navigation }: any) {
                           style={styles.quantityButton}
                           onPress={() => handleAddToCart(product)}
                         >
-                          <Ionicons name="add" size={16} color="#fff" />
+                          <Ionicons name="add" size={16} color={theme.text} />
                         </TouchableOpacity>
                       </View>
                     ) : (
@@ -452,7 +452,7 @@ export default function HomeScreen({ navigation }: any) {
                         style={styles.addToCartButton}
                         onPress={() => handleAddToCart(product)}
                       >
-                        <Ionicons name="add" size={20} color="#fff" />
+                        <Ionicons name="add" size={20} color={theme.text} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -725,7 +725,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 2,
   },
   addToCartButton: {
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -735,7 +737,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.searchBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
     borderRadius: 18,
     paddingHorizontal: 4,
     gap: 4,
@@ -744,7 +748,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -755,7 +759,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 6,
   },
   quantityText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 14,
     fontWeight: 'bold',
   },

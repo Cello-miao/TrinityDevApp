@@ -403,7 +403,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               setIsImportModalVisible(true);
             }}
           >
-            <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+            <Ionicons name="cloud-upload-outline" size={20} color={theme.primaryDark} />
             <Text style={styles.importButtonText}>Import</Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -423,7 +423,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               setIsAddModalVisible(true);
             }}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <Ionicons name="add" size={20} color={theme.primaryDark} />
             <Text style={styles.addButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
@@ -474,7 +474,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   style={styles.editButton}
                   onPress={() => handleEdit(product)}
                 >
-                  <Ionicons name="pencil-outline" size={16} color="#475569" />
+                  <Ionicons name="pencil-outline" size={16} color={theme.primaryDark} />
                   <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -527,7 +527,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                       accessibilityLabel="Scan barcode"
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Ionicons name="scan-outline" size={18} color="#fff" />
+                      <Ionicons name="scan-outline" size={18} color={theme.primaryDark} />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.fetchButton}
@@ -537,7 +537,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                       accessibilityLabel="Fetch product data by barcode"
                     >
                       {isFetchingBarcode ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={theme.primaryDark} />
                       ) : (
                         <Text style={styles.fetchButtonText}>Fetch Data</Text>
                       )}
@@ -614,7 +614,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                     style={styles.imagePickerButton}
                     onPress={pickImage}
                   >
-                    <Ionicons name="image-outline" size={20} color="#fff" />
+                    <Ionicons name="image-outline" size={20} color={theme.info} />
                   </TouchableOpacity>
                 </View>
                 {newProduct.image ? (
@@ -651,7 +651,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 disabled={isSavingProduct}
               >
                 {isSavingProduct ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={theme.primaryDark} />
                 ) : (
                   <Text style={styles.saveButtonText}>{editingProductId ? 'Update Product' : 'Save Product'}</Text>
                 )}
@@ -706,9 +706,9 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                 disabled={isSearchingImport}
               >
                 {isSearchingImport ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={theme.primaryDark} />
                 ) : (
-                  <Ionicons name="search" size={20} color="#fff" />
+                  <Ionicons name="search" size={20} color={theme.primaryDark} />
                 )}
               </TouchableOpacity>
             </View>
@@ -733,7 +733,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                     onPress={() => handleImportProduct(item)}
                     disabled={isImporting}
                   >
-                    <Ionicons name="download-outline" size={20} color="#fff" />
+                    <Ionicons name="download-outline" size={20} color={theme.info} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -783,13 +783,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingVertical: 14,
     borderRadius: 8,
     gap: 8,
   },
   importButtonText: {
-    color: '#fff',
+    color: theme.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -798,15 +800,15 @@ const createStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.searchBackground,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 18,
     gap: 8,
   },
   addButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   productCard: {
     backgroundColor: theme.card,
@@ -932,8 +934,8 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   editButtonText: {
     fontSize: 14,
-    color: theme.primary,
-    fontWeight: '500',
+    color: theme.primaryDark,
+    fontWeight: '600',
   },
   deleteButton: {
     flexDirection: 'row',
@@ -1019,7 +1021,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   fetchButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1027,12 +1031,14 @@ const createStyles = (theme: any) => StyleSheet.create({
     minWidth: 100,
   },
   fetchButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontWeight: '600',
     fontSize: 14,
   },
   scanButton: {
-    backgroundColor: theme.primaryDark,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1049,7 +1055,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 10,
   },
   imagePickerButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1085,13 +1093,15 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: '#fff',
+    color: theme.primaryDark,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1139,7 +1149,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   importSearchButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 50,
     height: 48,
     borderRadius: 8,
@@ -1179,7 +1191,9 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.textSecondary,
   },
   importResultButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     width: 40,
     height: 40,
     borderRadius: 20,

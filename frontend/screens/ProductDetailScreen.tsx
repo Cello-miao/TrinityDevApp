@@ -284,7 +284,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           onPress={handleAddToCart}
           disabled={product.stock === 0}
         >
-          <Ionicons name="cart" size={20} color="#fff" />
+          <Ionicons name="cart" size={20} color={theme.text} />
           <Text style={styles.addButtonText}>
             {cartQuantity > 0 ? 'Update Cart' : 'Add to Cart'}
           </Text>
@@ -441,7 +441,9 @@ const createStyles = (theme: any) => StyleSheet.create({
   },
   addButton: {
     flex: 1,
-    backgroundColor: theme.primary,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -449,10 +451,11 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   addButtonDisabled: {
-    backgroundColor: theme.textSecondary,
+    backgroundColor: theme.searchBackground,
+    borderColor: theme.border,
   },
   addButtonText: {
-    color: theme.buttonText,
+    color: theme.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
