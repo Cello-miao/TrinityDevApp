@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,31 +6,41 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  TextInput,
   Dimensions,
   ImageBackground,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Product } from '../types';
-import { productAPI, cartAPI } from '../lib/api';
-import { useTheme } from '../lib/theme';
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Product } from "../types";
+import { productAPI, cartAPI, orderAPI } from "../lib/api";
+import { useTheme } from "../lib/theme";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = (width - 48) / 2;
+
+const PROMO_IMAGES = [
+  "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800", // colorful fruits
+  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800", // grocery store
+  "https://images.unsplash.com/photo-1608686207856-001b95cf60ca?w=800", // fresh vegetables
+];
 
 export default function HomeScreen({ navigation }: any) {
   const theme = useTheme();
   const styles = createStyles(theme);
-  const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [dynamicCategories, setDynamicCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState('Guest');
+  const [userName, setUserName] = useState("");
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
+  const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [cartItemIds, setCartItemIds] = useState<Record<string, string>>({});
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] =
+    useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,92 +50,117 @@ export default function HomeScreen({ navigation }: any) {
         await loadCart();
       };
       load();
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
     if (products.length > 0) {
-      // Only load recommendations if not already loaded
-      if (recommendedProducts.length === 0) {
-        loadRecommendations();
-      }
+      if (recommendedProducts.length === 0) loadRecommendations();
+      loadDiscountedProducts();
       generateDynamicCategories();
     }
   }, [products]);
 
-  const generateDynamicCategories = () => {
-    const CATEGORY_META: Record<string, { emoji: string, image: string }> = {
-      'Fresh Produce': { emoji: '🥕', image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300' },
-      'Bakery': { emoji: '🥖', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300' },
-      'Dairy & Eggs': { emoji: '🧀', image: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=300' },
-      'Meat & Seafood': { emoji: '🥩', image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=300' },
-      'Beverages': { emoji: '☕', image: 'https://images.unsplash.com/photo-1546171753-97d7676e4602?w=300' },
-      'Snacks': { emoji: '🍿', image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=300' },
-      'Health & Beauty': { emoji: '💄', image: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?w=300' },
-      'Household': { emoji: '🧹', image: 'https://images.unsplash.com/photo-1584820927498-cafe5c152964?w=300' },
-      'Frozen': { emoji: '🧊', image: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2a009?w=300' },
-      'Pantry': { emoji: '🥫', image: 'https://images.unsplash.com/photo-1606859191214-25806e8e2423?w=300' },
-      'Chocolates': { emoji: '🍫', image: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=300' },
-      'Spreads': { emoji: '🍯', image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=300' },
-      'Breakfast': { emoji: '🥣', image: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=300' },
-      'Groceries': { emoji: '🛒', image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300' },
-    };
+  const CATEGORY_META: Record<string, { image: string }> = {
+    "Fresh Produce": {
+      image:
+        "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300",
+    },
+    Bakery: {
+      image:
+        "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300",
+    },
+    "Dairy & Eggs": {
+      image:
+        "https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=300",
+    },
+    "Meat & Seafood": {
+      image:
+        "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=300",
+    },
+    Beverages: {
+      image: "https://images.unsplash.com/photo-1546171753-97d7676e4602?w=300",
+    },
+    Snacks: {
+      image:
+        "https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=300",
+    },
+    Household: {
+      image:
+        "https://images.unsplash.com/photo-1584820927498-cafe5c152964?w=300",
+    },
+    Frozen: {
+      image:
+        "https://images.unsplash.com/photo-1588964895597-cfccd6e2a009?w=300",
+    },
+    Pantry: {
+      image:
+        "https://images.unsplash.com/photo-1606859191214-25806e8e2423?w=300",
+    },
+    Chocolates: {
+      image: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=300",
+    },
+    Groceries: {
+      image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=300",
+    },
+    "Beverages and beverages preparations": {
+      image: "https://images.unsplash.com/photo-1546171753-97d7676e4602?w=300",
+    },
+    "Petit-déjeuners": {
+      image:
+        "https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=300",
+    },
+    Other: {
+      image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=300",
+    },
+  };
 
+  const generateDynamicCategories = () => {
     const categoryMap = new Map();
-    products.forEach(p => {
+    products.forEach((p) => {
       if (p.category && !categoryMap.has(p.category)) {
         const meta = CATEGORY_META[p.category] || {
-          emoji: '📦',
-          image: p.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=300'
+          image:
+            p.image ||
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=300",
         };
-        categoryMap.set(p.category, {
-          name: p.category,
-          ...meta
-        });
+        categoryMap.set(p.category, { name: p.category, ...meta });
       }
     });
-    
     setDynamicCategories(Array.from(categoryMap.values()));
   };
 
   const loadUserName = async () => {
     try {
-      const userStr = await AsyncStorage.getItem('user');
+      const userStr = await AsyncStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
-        setUserName(user.name || user.email?.split('@')[0] || 'Guest');
+        setUserName(
+          user.first_name || user.name || user.email?.split("@")[0] || "",
+        );
       }
-    } catch (error) {
-      console.error('Failed to load user name:', error);
-    }
+    } catch {}
   };
 
   const loadCart = async () => {
     try {
-      console.log('Loading cart...');
       const cartData = await cartAPI.getCart();
-      console.log('Cart data:', cartData);
       const cartMap: Record<string, number> = {};
       const cartIds: Record<string, string> = {};
-      
-      // Backend returns array directly, not { items: [] }
       if (Array.isArray(cartData)) {
         cartData.forEach((item: any) => {
           const productId = item.product_id?.toString();
           const cartItemId = item.id?.toString();
           if (productId && cartItemId) {
-            cartMap[productId] = (cartMap[productId] || 0) + (item.quantity || 0);
+            cartMap[productId] =
+              (cartMap[productId] || 0) + (item.quantity || 0);
             cartIds[productId] = cartItemId;
           }
         });
       }
-      
-      console.log('Cart map:', cartMap);
-      console.log('Cart IDs:', cartIds);
       setCartItems(cartMap);
       setCartItemIds(cartIds);
-    } catch (error) {
-      console.error('Failed to load cart:', error);
+    } catch {
       setCartItems({});
       setCartItemIds({});
     }
@@ -136,10 +171,64 @@ export default function HomeScreen({ navigation }: any) {
       setLoading(true);
       const data = await productAPI.getAllProducts();
       setProducts(data);
-    } catch (error) {
-      console.error('Failed to load products:', error);
+    } catch {
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDiscountedProducts = async () => {
+    try {
+      const discounted = await productAPI.getDiscountedProducts();
+      if (discounted.length > 0) {
+        setDiscountedProducts(discounted.slice(0, 10));
+        return;
+      }
+    } catch {}
+    setDiscountedProducts(
+      products.filter((p) => Number(p.discount) > 0).slice(0, 10),
+    );
+  };
+
+  const loadRecommendations = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        try {
+          const recs = await productAPI.getRecommendations(6);
+          if (recs.length > 0) {
+            setRecommendedProducts(recs);
+            return;
+          }
+        } catch {}
+        try {
+          const orders = await orderAPI.getMyOrders();
+          if (orders.length > 0) {
+            const cats = new Set<string>();
+            const ids = new Set<string>();
+            orders.forEach((o: any) =>
+              o.items?.forEach((i: any) => {
+                if (i.product) {
+                  cats.add(i.product.category);
+                  ids.add(i.product.id);
+                }
+              }),
+            );
+            const recs = products.filter(
+              (p) => cats.has(p.category) && !ids.has(p.id),
+            );
+            if (recs.length >= 4) {
+              setRecommendedProducts(recs.slice(0, 6));
+              return;
+            }
+          }
+        } catch {}
+      }
+      setRecommendedProducts(
+        [...products].sort((a, b) => a.stock - b.stock).slice(0, 6),
+      );
+    } catch {
+      setRecommendedProducts(products.slice(0, 6));
     }
   };
 
@@ -149,618 +238,595 @@ export default function HomeScreen({ navigation }: any) {
     setIsLoadingRecommendations(false);
   };
 
-  const loadRecommendations = async () => {
-    try {
-      // Try to load recommendations from backend API first
-      const token = await AsyncStorage.getItem('token');
-      
-      if (token) {
-        // User is logged in, get personalized recommendations from backend
-        try {
-          const recommendations = await productAPI.getRecommendations(6);
-          setRecommendedProducts(recommendations);
-          return;
-        } catch (error) {
-          console.log('Failed to load backend recommendations, falling back to local logic:', error);
-          // Fall through to local logic if backend fails
-        }
-      }
-
-      // Fallback: Local recommendation logic (for guests or if backend fails)
-      // Load order history from local storage
-      const ordersStr = await AsyncStorage.getItem('orders');
-      
-      if (ordersStr) {
-        const orders = JSON.parse(ordersStr);
-        
-        // Extract purchased product categories and IDs
-        const purchasedCategories = new Set<string>();
-        const purchasedProductIds = new Set<string>();
-        
-        orders.forEach((order: any) => {
-          order.items?.forEach((item: any) => {
-            if (item.product) {
-              purchasedCategories.add(item.product.category);
-              purchasedProductIds.add(item.product.id);
-            }
-          });
-        });
-
-        // Recommend products from same categories, excluding already purchased
-        const recommendations = products.filter(product => 
-          purchasedCategories.has(product.category) && 
-          !purchasedProductIds.has(product.id)
-        );
-
-        // If not enough recommendations, add popular products (low stock = high demand)
-        if (recommendations.length < 6) {
-          const popularProducts = products
-            .filter(p => !purchasedProductIds.has(p.id))
-            .sort((a, b) => a.stock - b.stock)
-            .slice(0, 6 - recommendations.length);
-          
-          setRecommendedProducts([...recommendations, ...popularProducts].slice(0, 6));
-        } else {
-          setRecommendedProducts(recommendations.slice(0, 6));
-        }
-      } else {
-        // No purchase history - show popular products (low stock = popular)
-        const popularProducts = products
-          .sort((a, b) => a.stock - b.stock)
-          .slice(0, 6);
-        setRecommendedProducts(popularProducts);
-      }
-    } catch (error) {
-      console.error('Failed to load recommendations:', error);
-      // Fallback to first 6 products
-      setRecommendedProducts(products.slice(0, 6));
-    }
-  };
-
   const handleAddToCart = async (product: Product) => {
     try {
       await cartAPI.addToCart(product.id, 1);
-      // Reload cart to get updated quantities
       await loadCart();
-    } catch (error) {
-      console.error('Failed to add item to cart:', error);
-    }
+    } catch {}
   };
 
   const handleDecreaseQuantity = async (product: Product) => {
     try {
-      const currentQuantity = cartItems[product.id] || 0;
-      const cartItemId = cartItemIds[product.id];
-      
-      if (currentQuantity <= 1) {
-        // Remove from cart if quantity is 1
-        if (cartItemId) {
-          await cartAPI.removeFromCart(cartItemId);
-        }
+      const qty = cartItems[product.id] || 0;
+      const id = cartItemIds[product.id];
+      if (qty <= 1) {
+        if (id) await cartAPI.removeFromCart(id);
       } else {
-        // Decrease quantity
-        if (cartItemId) {
-          await cartAPI.updateCartItem(cartItemId, currentQuantity - 1);
-        }
+        if (id) await cartAPI.updateCartItem(id, qty - 1);
       }
-      
-      // Reload cart to get updated quantities
       await loadCart();
-    } catch (error) {
-      console.error('Failed to decrease quantity:', error);
-    }
+    } catch {}
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const cartTotal = Object.values(cartItems).reduce((a, b) => a + b, 0);
+
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header with User Greeting */}
-        <View style={styles.header}>
-          <View style={styles.greetingContainer}>
-            <Ionicons name="person-circle-outline" size={20} color="#64748b" />
-            <Text style={styles.greeting}>Hello, {userName}</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <LinearGradient
+          colors={[theme.primary, theme.primaryDark]}
+          style={styles.header}
+        >
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>
+              {getGreeting()}
+              {userName ? `, ${userName}` : ""}
+            </Text>
+            <Text style={styles.headerSub}>What would you like today?</Text>
           </View>
-        </View>
-
-        {/* Quick Action Buttons */}
-        {/* <View style={styles.quickActionsContainer}>
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Scanner')}
-          >
-            <View style={styles.quickActionIcon}>
-              <Ionicons name="scan" size={28} color="#fff" />
-            </View>
-            <Text style={styles.quickActionText}>Scan Product</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Cart')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#10b981' }]}>
-              <Ionicons name="cart" size={28} color="#fff" />
-            </View>
-            <Text style={styles.quickActionText}>My Cart</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Orders')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#f59e0b' }]}>
-              <Ionicons name="receipt" size={28} color="#fff" />
-            </View>
-            <Text style={styles.quickActionText}>Order History</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#8b5cf6' }]}>
-              <Ionicons name="person" size={28} color="#fff" />
-            </View>
-            <Text style={styles.quickActionText}>My Account</Text>
-          </TouchableOpacity>
-        </View> */}
-
-        {/* Special Offers */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="flash" size={18} color="#1e293b" />
-            <Text style={styles.sectionTitle}>Special Offers</Text>
-          </View>
-
-          {/* Main Promo Banner */}
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('PromoProducts')}
+            style={styles.cartBtn}
+            onPress={() => navigation.navigate("Cart")}
+          >
+            <Ionicons name="cart-outline" size={22} color="#fff" />
+            {cartTotal > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartTotal}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* Promo Banner */}
+        <View style={styles.px}>
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => navigation.navigate("PromoProducts")}
           >
             <ImageBackground
-              source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800' }}
-              style={styles.mainPromo}
-              imageStyle={{ borderRadius: 12 }}
+              source={{
+                uri: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800",
+              }}
+              style={styles.promoBanner}
+              imageStyle={styles.promoBannerImg}
             >
-              <View style={styles.promoOverlay}>
-                <Text style={styles.promoTitle}>Promotional Products</Text>
-                {/* <Text style={styles.promoSubtitle}>Up to 50% Off</Text> */}
-                <Text style={styles.promoDescription}>Tap to view discounted items</Text>
-              </View>
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.72)"]}
+                style={styles.promoGrad}
+              >
+                <View style={styles.promoTagRow}>
+                  <View style={styles.promoTag}>
+                    <Ionicons name="flash" size={11} color="#fff" />
+                    <Text style={styles.promoTagText}>DEALS OF THE DAY</Text>
+                  </View>
+                </View>
+                <Text style={styles.promoTitle}>Fresh Savings</Text>
+                <Text style={styles.promoSub}>
+                  Up to 50% off on selected items
+                </Text>
+                <View style={styles.promoShopBtn}>
+                  <Text style={styles.promoShopText}>Explore Offers →</Text>
+                </View>
+              </LinearGradient>
             </ImageBackground>
           </TouchableOpacity>
         </View>
 
-        {/* Shop by Category */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderWithAction}>
-            <Text style={styles.sectionTitle}>Shop by Category</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-              <Text style={styles.viewAllText}>View All →</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.categoriesGrid}>
-            {dynamicCategories.map((category, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.categoryCard}
-                onPress={() => navigation.navigate('CategoryProducts', { category })}
+        {/* On Sale Now */}
+        {discountedProducts.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionRow}>
+              <View style={styles.sectionLeft}>
+                <View
+                  style={[styles.sectionAccent, { backgroundColor: "#ef4444" }]}
+                />
+                <Text style={styles.sectionTitle}>On Sale Now</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("PromoProducts")}
               >
-                <ImageBackground
-                  source={{ uri: category.image }}
-                  style={styles.categoryImage}
-                  imageStyle={{ borderRadius: 12 }}
-                >
-                  <View style={styles.categoryOverlay}>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                  </View>
-                </ImageBackground>
+                <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Recommended for You */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderWithAction}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="star" size={18} color="#1e293b" />
-              <Text style={styles.sectionTitle}>Recommended for You</Text>
             </View>
-            <TouchableOpacity 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -16 }}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+            >
+              {discountedProducts.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.saleCard}
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: p })
+                  }
+                  activeOpacity={0.88}
+                >
+                  <View style={styles.saleBadge}>
+                    <Text style={styles.saleBadgeText}>
+                      -{Math.round(Number(p.discount))}%
+                    </Text>
+                  </View>
+                  <Image
+                    source={{ uri: p.image }}
+                    style={styles.saleImg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.saleBody}>
+                    <Text style={styles.saleName} numberOfLines={1}>
+                      {p.name}
+                    </Text>
+                    <Text style={styles.saleOld}>€{p.price.toFixed(2)}</Text>
+                    <Text style={styles.saleNew}>
+                      €
+                      {(
+                        p.price *
+                        (1 - (Number(p.discount) || 0) / 100)
+                      ).toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.saleAddBtn}
+                      onPress={() => handleAddToCart(p)}
+                    >
+                      <Ionicons name="add" size={16} color="#fff" />
+                      <Text style={styles.saleAddText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Categories */}
+        {dynamicCategories.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionRow}>
+              <View style={styles.sectionLeft}>
+                <View
+                  style={[styles.sectionAccent, { backgroundColor: "#10b981" }]}
+                />
+                <Text style={styles.sectionTitle}>Shop by Category</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate("Search")}>
+                <Text style={styles.seeAll}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -16 }}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+            >
+              {dynamicCategories.map((cat, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.catCard}
+                  onPress={() =>
+                    navigation.navigate("CategoryProducts", { category: cat })
+                  }
+                  activeOpacity={0.88}
+                >
+                  <ImageBackground
+                    source={{ uri: cat.image }}
+                    style={styles.catBg}
+                    imageStyle={{ borderRadius: 14 }}
+                  >
+                    <LinearGradient
+                      colors={["transparent", "rgba(0,0,0,0.6)"]}
+                      style={styles.catGrad}
+                    >
+                      <Text style={styles.catName} numberOfLines={2}>
+                        {cat.name}
+                      </Text>
+                    </LinearGradient>
+                  </ImageBackground>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Recommended */}
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
+            <View style={styles.sectionLeft}>
+              <View
+                style={[styles.sectionAccent, { backgroundColor: "#f59e0b" }]}
+              />
+              <Text style={styles.sectionTitle}>Picked for You</Text>
+            </View>
+            <TouchableOpacity
               onPress={refreshRecommendations}
               disabled={isLoadingRecommendations}
             >
-              <Ionicons 
-                name="refresh" 
-                size={20} 
-                color={isLoadingRecommendations ? "#cbd5e1" : "#64748b"} 
+              <Ionicons
+                name="refresh"
+                size={20}
+                color={
+                  isLoadingRecommendations ? theme.border : theme.textSecondary
+                }
               />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.productsGrid}>
-            {recommendedProducts.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                style={styles.productCard}
-                onPress={() => navigation.navigate('ProductDetail', { product })}
-              >
-                {product.stock < 20 && (
-                  <View style={styles.hotBadge}>
-                    <Text style={styles.hotBadgeText}>Hot</Text>
-                  </View>
-                )}
-                {Number(product.discount) > 0 && (
-                  <View style={styles.discountBadge}>
-                    <Ionicons name="flash" size={10} color="#fff" />
-                    <Text style={styles.discountBadgeText}>{`${Math.round(product.discount || 0)}%`}</Text>
-                  </View>
-                )}
-                <Image
-                  source={{ uri: product.image }}
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productVendor}>Farm Direct</Text>
-                  <Text style={styles.productName} numberOfLines={1}>
-                    {product.name}
-                  </Text>
-                  <View style={styles.productFooter}>
-                    <View style={styles.priceBlock}>
-                      {Number(product.discount) > 0 ? (
-                        <>
-                          <Text style={styles.originalPrice}>€{product.price.toFixed(2)}</Text>
-                          <Text style={styles.productPrice}>
-                            €{(product.price * (1 - (product.discount || 0) / 100)).toFixed(2)}
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={[styles.originalPrice, styles.originalPricePlaceholder]}>€0.00</Text>
-                          <Text style={styles.productPrice}>€{product.price.toFixed(2)}</Text>
-                        </>
-                      )}
-                      <Text style={styles.stockText}>Stock {product.stock}</Text>
+          {isLoadingRecommendations ? (
+            <ActivityIndicator
+              color={theme.primary}
+              style={{ marginVertical: 32 }}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {recommendedProducts.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.productCard}
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: p })
+                  }
+                  activeOpacity={0.88}
+                >
+                  {Number(p.discount) > 0 && (
+                    <View style={styles.discBadge}>
+                      <Text style={styles.discText}>
+                        -{Math.round(Number(p.discount))}%
+                      </Text>
                     </View>
-                    {cartItems[product.id] ? (
-                      <View style={styles.quantityControl}>
-                        <TouchableOpacity 
-                          style={styles.quantityButton}
-                          onPress={() => handleDecreaseQuantity(product)}
-                        >
-                          <Ionicons name="remove" size={16} color={theme.text} />
-                        </TouchableOpacity>
-                        <View style={styles.quantityDisplay}>
-                          <Text style={styles.quantityText}>{cartItems[product.id]}</Text>
-                        </View>
-                        <TouchableOpacity 
-                          style={styles.quantityButton}
-                          onPress={() => handleAddToCart(product)}
-                        >
-                          <Ionicons name="add" size={16} color={theme.text} />
-                        </TouchableOpacity>
+                  )}
+                  {p.stock < 20 && (
+                    <View style={styles.hotBadge}>
+                      <Text style={styles.hotText}></Text>
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: p.image }}
+                    style={styles.productImg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.productBody}>
+                    <Text style={styles.productName} numberOfLines={2}>
+                      {p.name}
+                    </Text>
+                    <Text style={styles.productCat}>{p.category}</Text>
+                    <View style={styles.productFooter}>
+                      <View>
+                        {Number(p.discount) > 0 ? (
+                          <>
+                            <Text style={styles.oldPrice}>
+                              €{p.price.toFixed(2)}
+                            </Text>
+                            <Text style={styles.newPrice}>
+                              €
+                              {(
+                                p.price *
+                                (1 - (Number(p.discount) || 0) / 100)
+                              ).toFixed(2)}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text style={styles.newPrice}>
+                            €{p.price.toFixed(2)}
+                          </Text>
+                        )}
                       </View>
-                    ) : (
-                      <TouchableOpacity 
-                        style={styles.addToCartButton}
-                        onPress={() => handleAddToCart(product)}
-                      >
-                        <Ionicons name="add" size={20} color={theme.text} />
-                      </TouchableOpacity>
-                    )}
+                      {cartItems[p.id] ? (
+                        <View style={styles.qtyRow}>
+                          <TouchableOpacity
+                            style={styles.qtyBtn}
+                            onPress={() => handleDecreaseQuantity(p)}
+                          >
+                            <Ionicons
+                              name="remove"
+                              size={13}
+                              color={theme.text}
+                            />
+                          </TouchableOpacity>
+                          <Text style={styles.qtyNum}>{cartItems[p.id]}</Text>
+                          <TouchableOpacity
+                            style={styles.qtyBtn}
+                            onPress={() => handleAddToCart(p)}
+                          >
+                            <Ionicons name="add" size={13} color={theme.text} />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.addBtn}
+                          onPress={() => handleAddToCart(p)}
+                        >
+                          <Ionicons name="add" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
-
-        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
 }
 
-const createStyles = (theme: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  header: {
-    backgroundColor: theme.headerBackground,
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 12,
-  },
-  greetingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  greeting: {
-    fontSize: 16,
-    color: theme.text,
-    fontWeight: '400',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    gap: 12,
-    backgroundColor: theme.surface,
-  },
-  quickActionButton: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 8,
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: theme.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quickActionText: {
-    fontSize: 11,
-    color: theme.textSecondary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.searchBackground,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: theme.text,
-  },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.primaryDark,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingVertical: 16,
-    borderRadius: 8,
-    gap: 10,
-  },
-  scanButtonText: {
-    color: theme.buttonText,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 6,
-  },
-  sectionHeaderWithAction: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.text,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    fontWeight: '500',
-  },
-  mainPromo: {
-    height: 160,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  promoOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    padding: 20,
-    justifyContent: 'center',
-  },
-  promoTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  promoSubtitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  promoDescription: {
-    color: '#e2e8f0',
-    fontSize: 14,
-  },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  categoryCard: {
-    width: (width - 44) / 2,
-    aspectRatio: 0.95,
-  },
-  categoryImage: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  categoryOverlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    padding: 10,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  categoryName: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  productsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginHorizontal: -4,
-  },
-  productCard: {
-    width: (width - 44) / 2,
-    backgroundColor: theme.card,
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  hotBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: theme.badgeBackground,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-    zIndex: 10,
-  },
-  hotBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  discountBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#f59e0b',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  discountBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  productImage: {
-    width: '100%',
-    height: 140,
-    backgroundColor: theme.inputBackground,
-  },
-  productInfo: {
-    padding: 12,
-  },
-  productVendor: {
-    fontSize: 11,
-    color: theme.textSecondary,
-    marginBottom: 4,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: 8,
-  },
-  productFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  priceBlock: {
-    minHeight: 48,
-    justifyContent: 'flex-end',
-  },
-  productPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.priceText,
-  },
-  originalPrice: {
-    fontSize: 12,
-    color: theme.textTertiary,
-    textDecorationLine: 'line-through',
-    marginBottom: 2,
-  },
-  originalPricePlaceholder: {
-    opacity: 0,
-  },
-  stockText: {
-    fontSize: 10,
-    color: theme.textTertiary,
-    marginTop: 2,
-  },
-  addToCartButton: {
-    backgroundColor: theme.searchBackground,
-    borderWidth: 1,
-    borderColor: theme.border,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.searchBackground,
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 18,
-    paddingHorizontal: 4,
-    gap: 4,
-  },
-  quantityButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityDisplay: {
-    minWidth: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  quantityText: {
-    color: theme.text,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
+const createStyles = (theme: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    px: { paddingHorizontal: 16 },
+
+    // Header
+    header: {
+      paddingTop: Platform.OS === "ios" ? 56 : 40,
+      paddingBottom: 24,
+      paddingHorizontal: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+      marginBottom: 20,
+    },
+    headerLeft: { flex: 1 },
+    greeting: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: "#fff",
+      marginBottom: 2,
+    },
+    headerSub: { fontSize: 13, color: "rgba(255,255,255,0.75)" },
+    cartBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cartBadge: {
+      position: "absolute",
+      top: -3,
+      right: -3,
+      backgroundColor: "#ef4444",
+      borderRadius: 9,
+      minWidth: 18,
+      height: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 4,
+    },
+    cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+
+    // Promo
+    promoBanner: { height: 190, marginBottom: 4 },
+    promoBannerImg: { borderRadius: 20 },
+    promoGrad: {
+      flex: 1,
+      borderRadius: 20,
+      padding: 18,
+      justifyContent: "flex-end",
+    },
+    promoTagRow: { marginBottom: 8 },
+    promoTag: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "#ef4444",
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
+    },
+    promoTagText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    promoTitle: {
+      color: "#fff",
+      fontSize: 24,
+      fontWeight: "900",
+      marginBottom: 2,
+    },
+    promoSub: {
+      color: "rgba(255,255,255,0.85)",
+      fontSize: 13,
+      marginBottom: 12,
+    },
+    promoShopBtn: {
+      backgroundColor: "#fff",
+      alignSelf: "flex-start",
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+    },
+    promoShopText: { color: "#1e293b", fontSize: 13, fontWeight: "700" },
+
+    // Section
+    section: { marginTop: 24, paddingHorizontal: 16 },
+    sectionRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+    },
+    sectionLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+    sectionAccent: { width: 4, height: 20, borderRadius: 2 },
+    sectionTitle: { fontSize: 17, fontWeight: "800", color: theme.text },
+    seeAll: { fontSize: 13, color: theme.primary, fontWeight: "600" },
+
+    // Sale Cards
+    saleCard: {
+      width: 140,
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    saleBadge: {
+      position: "absolute",
+      top: 8,
+      left: 8,
+      backgroundColor: "#ef4444",
+      borderRadius: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      zIndex: 10,
+    },
+    saleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+    saleImg: { width: "100%", height: 110 },
+    saleBody: { padding: 10 },
+    saleName: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 3,
+    },
+    saleOld: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      textDecorationLine: "line-through",
+    },
+    saleNew: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: "#ef4444",
+      marginBottom: 8,
+    },
+    saleAddBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.primary,
+      borderRadius: 8,
+      paddingVertical: 6,
+      gap: 4,
+    },
+    saleAddText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+
+    // Category Cards
+    catCard: { width: 100, height: 75, borderRadius: 14, overflow: "hidden" },
+    catBg: { flex: 1 },
+    catGrad: {
+      flex: 1,
+      borderRadius: 14,
+      justifyContent: "flex-end",
+      padding: 7,
+    },
+    catName: {
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+
+    // Product Grid
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    productCard: {
+      width: CARD_WIDTH,
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.07,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    discBadge: {
+      position: "absolute",
+      top: 10,
+      left: 10,
+      backgroundColor: "#ef4444",
+      borderRadius: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      zIndex: 10,
+    },
+    discText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+    hotBadge: { position: "absolute", top: 8, right: 10, zIndex: 10 },
+    hotText: { fontSize: 16 },
+    productImg: { width: "100%", height: 148 },
+    productBody: { padding: 12 },
+    productName: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 2,
+      lineHeight: 19,
+    },
+    productCat: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      marginBottom: 10,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
+    productFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    oldPrice: {
+      fontSize: 11,
+      color: theme.textTertiary,
+      textDecorationLine: "line-through",
+    },
+    newPrice: { fontSize: 16, fontWeight: "900", color: theme.text },
+    addBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: theme.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    qtyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.searchBackground,
+      borderRadius: 20,
+      paddingHorizontal: 4,
+      gap: 2,
+    },
+    qtyBtn: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    qtyNum: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: theme.text,
+      minWidth: 18,
+      textAlign: "center",
+    },
+  });

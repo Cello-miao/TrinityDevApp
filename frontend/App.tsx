@@ -1,37 +1,37 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { ThemeProvider, useTheme, useThemeMode } from './lib/theme';
+import React, { useEffect } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
+import { ThemeProvider, useTheme, useThemeMode } from "./lib/theme";
 import {
   StyledAlertHost,
   installStyledAlert,
   uninstallStyledAlert,
-} from './lib/styledAlert';
+} from "./lib/styledAlert";
 
 // Screens
-import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import HomeScreen from './screens/HomeScreen';
-import SearchScreen from './screens/SearchScreen';
-import CategoryProductsScreen from './screens/CategoryProductsScreen';
-import ProductDetailScreen from './screens/ProductDetailScreen';
-import CartScreen from './screens/CartScreen';
-import CheckoutScreen from './screens/CheckoutScreen';
-import OrderHistoryScreen from './screens/OrderHistoryScreen';
-import OrderDetailScreen from './screens/OrderDetailScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import EditProfileScreen from './screens/EditProfileScreen';
-import BarcodeScannerScreen from './screens/BarcodeScannerScreen';
-import AdminDashboardScreen from './screens/AdminDashboardScreen';
-import AdminStatsScreen from './screens/AdminStatsScreen';
-import AdminOrdersScreen from './screens/AdminOrdersScreen';
-import AdminCustomersScreen from './screens/AdminCustomersScreen';
-import AdminProfileScreen from './screens/AdminProfileScreen';
-import FavoritesScreen from './screens/FavoritesScreen';
-import PromoProductsScreen from './screens/PromoProductsScreen';
+import LoginScreen from "./screens/LoginScreen";
+import RegisterScreen from "./screens/RegisterScreen";
+import HomeScreen from "./screens/HomeScreen";
+import SearchScreen from "./screens/SearchScreen";
+import CategoryProductsScreen from "./screens/CategoryProductsScreen";
+import ProductDetailScreen from "./screens/ProductDetailScreen";
+import CartScreen from "./screens/CartScreen";
+import CheckoutScreen from "./screens/CheckoutScreen";
+import OrderHistoryScreen from "./screens/OrderHistoryScreen";
+import OrderDetailScreen from "./screens/OrderDetailScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import EditProfileScreen from "./screens/EditProfileScreen";
+import BarcodeScannerScreen from "./screens/BarcodeScannerScreen";
+import AdminDashboardScreen from "./screens/AdminDashboardScreen";
+import AdminStatsScreen from "./screens/AdminStatsScreen";
+import AdminOrdersScreen from "./screens/AdminOrdersScreen";
+import AdminCustomersScreen from "./screens/AdminCustomersScreen";
+import AdminProfileScreen from "./screens/AdminProfileScreen";
+import FavoritesScreen from "./screens/FavoritesScreen";
+import PromoProductsScreen from "./screens/PromoProductsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,23 +39,23 @@ const Tab = createBottomTabNavigator();
 function MainTabs() {
   const theme = useTheme();
   const { isDark } = useThemeMode();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
+          let iconName: keyof typeof Ionicons.glyphMap = "home";
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Search') {
-            iconName = focused ? 'search' : 'search-outline';
-          } else if (route.name === 'Cart') {
-            iconName = focused ? 'cart' : 'cart-outline';
-          } else if (route.name === 'Orders') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Search") {
+            iconName = focused ? "search" : "search-outline";
+          } else if (route.name === "Cart") {
+            iconName = focused ? "cart" : "cart-outline";
+          } else if (route.name === "Orders") {
+            iconName = focused ? "receipt" : "receipt-outline";
+          } else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -69,30 +69,30 @@ function MainTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ title: "Home" }}
       />
-      <Tab.Screen 
-        name="Search" 
+      <Tab.Screen
+        name="Search"
         component={SearchScreen}
-        options={{ title: 'Search' }}
+        options={{ title: "Search" }}
       />
-      <Tab.Screen 
-        name="Cart" 
+      <Tab.Screen
+        name="Cart"
         component={CartScreen}
-        options={{ title: 'Cart' }}
+        options={{ title: "Cart" }}
       />
-      <Tab.Screen 
-        name="Orders" 
+      <Tab.Screen
+        name="Orders"
         component={OrderHistoryScreen}
-        options={{ title: 'Orders' }}
+        options={{ title: "Orders" }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: "Profile" }}
       />
     </Tab.Navigator>
   );
@@ -101,23 +101,23 @@ function MainTabs() {
 function AdminTabs() {
   const theme = useTheme();
   const { isDark } = useThemeMode();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'cube';
+          let iconName: keyof typeof Ionicons.glyphMap = "cube";
 
-          if (route.name === 'Dashboard') {
-            iconName = focused ? 'stats-chart' : 'stats-chart-outline';
-          } else if (route.name === 'Products') {
-            iconName = focused ? 'cube' : 'cube-outline';
-          } else if (route.name === 'AdminOrders') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
-          } else if (route.name === 'AdminCustomers') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'AdminProfile') {
-            iconName = focused ? 'person' : 'person-outline';
+          if (route.name === "Dashboard") {
+            iconName = focused ? "stats-chart" : "stats-chart-outline";
+          } else if (route.name === "Products") {
+            iconName = focused ? "cube" : "cube-outline";
+          } else if (route.name === "AdminOrders") {
+            iconName = focused ? "receipt" : "receipt-outline";
+          } else if (route.name === "AdminCustomers") {
+            iconName = focused ? "people" : "people-outline";
+          } else if (route.name === "AdminProfile") {
+            iconName = focused ? "person" : "person-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -131,30 +131,30 @@ function AdminTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={AdminStatsScreen}
-        options={{ title: 'Dashboard' }}
+        options={{ title: "Dashboard" }}
       />
-      <Tab.Screen 
-        name="Products" 
+      <Tab.Screen
+        name="Products"
         component={AdminDashboardScreen}
-        options={{ title: 'Products' }}
+        options={{ title: "Products" }}
       />
-      <Tab.Screen 
-        name="AdminOrders" 
+      <Tab.Screen
+        name="AdminOrders"
         component={AdminOrdersScreen}
-        options={{ title: 'Orders' }}
+        options={{ title: "Orders" }}
       />
-      <Tab.Screen 
-        name="AdminCustomers" 
+      <Tab.Screen
+        name="AdminCustomers"
         component={AdminCustomersScreen}
-        options={{ title: 'Customers' }}
+        options={{ title: "Customers" }}
       />
-      <Tab.Screen 
-        name="AdminProfile" 
+      <Tab.Screen
+        name="AdminProfile"
         component={AdminProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ title: "Profile" }}
       />
     </Tab.Navigator>
   );
@@ -172,81 +172,81 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <NavigationContainer>
-        <Stack.Navigator 
+        <Stack.Navigator
           initialRouteName="Login"
           screenOptions={{
             headerStyle: {
-              backgroundColor: '#475569',
+              backgroundColor: "#475569",
             },
-            headerTintColor: '#fff',
+            headerTintColor: "#fff",
             headerTitleStyle: {
-              fontWeight: 'bold',
+              fontWeight: "bold",
             },
           }}
         >
-          <Stack.Screen 
-            name="Login" 
+          <Stack.Screen
+            name="Login"
             component={LoginScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Register" 
+          <Stack.Screen
+            name="Register"
             component={RegisterScreen}
-            options={{ title: 'Register' }}
+            options={{ title: "Register" }}
           />
-          <Stack.Screen 
-            name="Main" 
+          <Stack.Screen
+            name="Main"
             component={MainTabs}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="AdminDashboard" 
+          <Stack.Screen
+            name="AdminDashboard"
             component={AdminTabs}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="CategoryProducts" 
+          <Stack.Screen
+            name="CategoryProducts"
             component={CategoryProductsScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Favorites" 
+          <Stack.Screen
+            name="Favorites"
             component={FavoritesScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="ProductDetail" 
+          <Stack.Screen
+            name="ProductDetail"
             component={ProductDetailScreen}
-            options={{ title: 'Product Details' }}
+            options={{ title: "Product Details" }}
           />
-          <Stack.Screen 
-            name="PromoProducts" 
+          <Stack.Screen
+            name="PromoProducts"
             component={PromoProductsScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Checkout" 
+          <Stack.Screen
+            name="Checkout"
             component={CheckoutScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="OrderDetail" 
+          <Stack.Screen
+            name="OrderDetail"
             component={OrderDetailScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="EditProfile" 
+          <Stack.Screen
+            name="EditProfile"
             component={EditProfileScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Scanner" 
+          <Stack.Screen
+            name="Scanner"
             component={BarcodeScannerScreen}
             options={{
               headerShown: false,
-              animation: 'none',
+              animation: "none",
             }}
           />
         </Stack.Navigator>
