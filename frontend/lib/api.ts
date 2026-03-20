@@ -41,6 +41,8 @@ const transformProduct = (dbProduct: any): Product => {
     barcode: dbProduct.barcode || "",
     stock: dbProduct.quantity || 0,
     discount: parseFloat(dbProduct.discount_percentage) || 0,
+    brand: dbProduct.brand || dbProduct.brands || "",
+    nutritionalInfo: dbProduct.nutritional_info || dbProduct.nutritionalInfo || null,
   };
 };
 
@@ -249,9 +251,11 @@ export const productAPI = {
       name: product.name,
       price: product.price,
       description: product.description,
+      brand: product.brand,
       picture: product.image,
       category: product.category,
       barcode: product.barcode,
+      nutritional_info: product.nutritionalInfo,
       quantity: product.stock,
       discount_percentage: product.discount || 0,
     };
@@ -270,9 +274,11 @@ export const productAPI = {
       name: product.name,
       price: product.price,
       description: product.description,
+      brand: product.brand,
       picture: product.image,
       category: product.category,
       barcode: product.barcode,
+      nutritional_info: product.nutritionalInfo,
       quantity: product.stock,
       discount_percentage: product.discount || 0,
     };
