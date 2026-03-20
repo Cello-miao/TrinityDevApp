@@ -1,10 +1,9 @@
 const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
 
 const ACCESS_TOKEN_EXPIRY = "15m";
-const REFRESH_TOKEN_EXPIRY_DAYS = 7;
+const REFRESH_TOKEN_EXPIRY = "7d";
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -14,13 +13,17 @@ const generateAccessToken = (user) => {
   );
 };
 
-const generateRefreshToken = () => {
-  return crypto.randomBytes(64).toString("hex");
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: REFRESH_TOKEN_EXPIRY },
+  );
 };
 
 const saveRefreshToken = async (userId, token) => {
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+  expiresAt.setDate(expiresAt.getDate() + 7);
 
   await pool.query(
     `INSERT INTO refresh_tokens ("userId", token, "expiresAt", "createdAt", "updatedAt") VALUES ($1, $2, $3, NOW(), NOW())`,
@@ -84,7 +87,7 @@ const login = async (req, res) => {
     }
 
     const accessToken = generateAccessToken(user.rows[0]);
-    const refreshToken = generateRefreshToken();
+    const refreshToken = generateRefreshToken(user.rows[0]);
 
     await saveRefreshToken(user.rows[0].id, refreshToken);
 
@@ -106,6 +109,15 @@ const refresh = async (req, res) => {
   }
 
   try {
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
+    }
+
     const result = await pool.query(
       `SELECT rt.*, u.id as user_id, u.email, u.role 
        FROM refresh_tokens rt 
@@ -115,17 +127,10 @@ const refresh = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(403).json({ message: "Invalid refresh token" });
+      return res.status(403).json({ message: "Refresh token revoked" });
     }
 
     const tokenRow = result.rows[0];
-
-    if (new Date() > new Date(tokenRow.expiresAt)) {
-      await pool.query("DELETE FROM refresh_tokens WHERE token = $1", [
-        refreshToken,
-      ]);
-      return res.status(403).json({ message: "Refresh token expired" });
-    }
 
     const newAccessToken = generateAccessToken({
       id: tokenRow.user_id,
@@ -133,7 +138,12 @@ const refresh = async (req, res) => {
       role: tokenRow.role,
     });
 
-    const newRefreshToken = generateRefreshToken();
+    const newRefreshToken = generateRefreshToken({
+      id: tokenRow.user_id,
+      email: tokenRow.email,
+      role: tokenRow.role,
+    });
+
     await pool.query("DELETE FROM refresh_tokens WHERE token = $1", [
       refreshToken,
     ]);
