@@ -230,7 +230,7 @@ export default function AdminStatsScreen({ navigation }: any) {
       const [orders, users, products] = await Promise.all([
         orderAPI.getAllOrders(),
         userAPI.getAllUsers(),
-        productAPI.getAllProducts(),
+        productAPI.getAllProducts(true),
       ]);
       setAllOrders(orders);
       setUserCount(users.filter((u: any) => u.role !== 'admin').length);

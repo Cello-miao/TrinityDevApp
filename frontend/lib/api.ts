@@ -29,6 +29,22 @@ const getApiBaseUrl = (): string => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+const API_REQUEST_TIMEOUT_MS = 15000;
+
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = API_REQUEST_TIMEOUT_MS,
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 const transformProduct = (dbProduct: any): Product => {
   return {
@@ -140,7 +156,7 @@ const apiRequest = async (
     }
 
     const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetchWithTimeout(url, { ...options, headers });
     const data = await response.json();
 
     // Token expired — try to refresh
@@ -148,7 +164,10 @@ const apiRequest = async (
       const newToken = await refreshTokenRequest();
       if (newToken) {
         headers["Authorization"] = `Bearer ${newToken}`;
-        const retryResponse = await fetch(url, { ...options, headers });
+        const retryResponse = await fetchWithTimeout(url, {
+          ...options,
+          headers,
+        });
         const retryData = await retryResponse.json();
         if (!retryResponse.ok) {
           throw new Error(
@@ -236,8 +255,9 @@ export const authAPI = {
 };
 
 export const productAPI = {
-  getAllProducts: async (): Promise<Product[]> => {
-    const data = await apiRequest("/products", { method: "GET" });
+  getAllProducts: async (includeUnpriced: boolean = false): Promise<Product[]> => {
+    const endpoint = includeUnpriced ? "/products?include_unpriced=true" : "/products";
+    const data = await apiRequest(endpoint, { method: "GET" });
     return data.map(transformProduct);
   },
 

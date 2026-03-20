@@ -219,12 +219,10 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           <Text style={styles.sectionTitle}>Product Description</Text>
           <Text style={styles.description}>{product.description}</Text>
 
-          {product.brand && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Brand:</Text>
-              <Text style={styles.infoValue}>{product.brand}</Text>
-            </View>
-          )}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Brand:</Text>
+            <Text style={styles.infoValue}>{product.brand || 'Unknown Brand'}</Text>
+          </View>
 
           {product.nutritionalInfo && (
             <>
