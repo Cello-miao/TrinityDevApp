@@ -25,7 +25,7 @@ router.get("/search", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
+//
 router.get("/barcode/:barcode", async (req, res) => {
   try {
     const { barcode } = req.params;
