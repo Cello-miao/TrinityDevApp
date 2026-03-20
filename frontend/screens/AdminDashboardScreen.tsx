@@ -9,7 +9,8 @@ import {
   Image,
   SafeAreaView,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -49,6 +50,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
+    brand: '',
     price: '',
     description: '',
     category: 'produce',
@@ -57,6 +59,23 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     stock: '100',
     discount: '0',
   });
+
+  const showSuccessAlertAfterModalClose = (message: string) => {
+    if (Platform.OS === 'ios') {
+      // iOS can freeze when closing one modal and opening another immediately.
+      // Keep success feedback silent on iOS for this flow to avoid modal contention.
+      return;
+    }
+
+    showAppAlert('Success', message);
+  };
+
+  const showImportSuccessAfterModalClose = (message: string) => {
+    const delay = Platform.OS === 'ios' ? 380 : 120;
+    setTimeout(() => {
+      showAppAlert('Success', message);
+    }, delay);
+  };
 
   useEffect(() => {
     loadProducts();
@@ -108,7 +127,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await productAPI.getAllProducts();
+      const data = await productAPI.getAllProducts(true);
       setProducts(data);
     } catch (error) {
       console.error('Failed to load products:', error);
@@ -127,6 +146,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     setEditingProductId(product.id);
     setNewProduct({
       name: product.name,
+      brand: product.brand || '',
       price: product.price.toString(),
       description: product.description || '',
       category: product.category,
@@ -191,7 +211,24 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
     try {
       const data = await fetchProductByBarcode(barcode);
       if (data && data.product) {
+        const fetchedName = (data.product.product_name || '').trim();
+        const fetchedBrand = (data.product.brands || '').trim().slice(0, 100);
+        const fetchedImage = (data.product.image_url || '').trim();
+        const fetchedDescription = (data.product.ingredients_text || '').trim().slice(0, 2000);
+
         setNewProduct(prev => {
+          const isEditing = Boolean(editingProductId);
+          const isEmpty = (value: string) => !value || !value.trim();
+
+          if (isEditing) {
+            return {
+              ...prev,
+              // For edit flow, only backfill missing brand to avoid pulling large text/image fields.
+              brand: isEmpty(prev.brand) ? (fetchedBrand || prev.brand) : prev.brand,
+              name: isEmpty(prev.name) ? (fetchedName || prev.name) : prev.name,
+            };
+          }
+
           // Extract the first category from the comma-separated list if available
           let fetchedCategory = prev.category;
           if (data.product.categories) {
@@ -203,13 +240,16 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
           return {
             ...prev,
-            name: data.product.product_name || prev.name,
-            image: data.product.image_url || prev.image,
-            description: data.product.ingredients_text || prev.description,
+            name: fetchedName || prev.name,
+            brand: fetchedBrand || prev.brand,
+            image: fetchedImage || prev.image,
+            description: fetchedDescription || prev.description,
             category: fetchedCategory,
           };
         });
-        showAppAlert('Success', 'Product data fetched from OpenFoodFacts');
+        if (Platform.OS !== 'ios') {
+          showAppAlert('Success', 'Product data fetched from OpenFoodFacts');
+        }
       } else {
         showAppAlert('Not Found', 'Product not found in OpenFoodFacts database');
       }
@@ -284,38 +324,85 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
     setIsSavingProduct(true);
     try {
+      const saveStartedAt = Date.now();
+      const normalizedName = newProduct.name.trim();
+      const normalizedBrand = newProduct.brand.trim().slice(0, 100);
+      const normalizedDescription = newProduct.description.trim().slice(0, 4000);
+      const normalizedCategory = newProduct.category.trim();
+
       const productData = {
-        name: newProduct.name,
+        name: normalizedName,
+        brand: normalizedBrand,
         price: parseFloat(newProduct.price),
-        description: newProduct.description,
-        category: newProduct.category,
+        description: normalizedDescription,
+        category: normalizedCategory,
         barcode: normalizedBarcode,
         image: newProduct.image || 'https://via.placeholder.com/150',
         stock: parseInt(newProduct.stock) || 0,
         discount: parseFloat(newProduct.discount) || 0,
       };
 
-      if (editingProductId) {
-        await productAPI.updateProduct(editingProductId, productData);
-        showAppAlert('Success', 'Product updated successfully');
-      } else {
-        await productAPI.createProduct(productData);
-        showAppAlert('Success', 'Product added successfully');
+      const savePromise = editingProductId
+        ? productAPI.updateProduct(editingProductId, productData)
+        : productAPI.createProduct(productData);
+
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+      const saveTimeout = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error('Save request timeout. Please check backend service and try again.'));
+        }, 15000);
+      });
+
+      let savedProduct: Product;
+      try {
+        savedProduct = (await Promise.race([savePromise, saveTimeout])) as Product;
+      } finally {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
       }
-      
+
+      console.log(`Product save finished in ${Date.now() - saveStartedAt}ms`);
+
       setIsAddModalVisible(false);
       setEditingProductId(null);
-      setNewProduct({
-        name: '',
-        price: '',
-        description: '',
-        category: 'produce',
-        barcode: '',
-        image: '',
-        stock: '100',
-        discount: '0',
-      });
-      loadProducts();
+
+      const resetProductForm = () => {
+        setNewProduct({
+          name: '',
+          brand: '',
+          price: '',
+          description: '',
+          category: 'produce',
+          barcode: '',
+          image: '',
+          stock: '100',
+          discount: '0',
+        });
+      };
+
+      if (Platform.OS === 'ios') {
+        // On iOS, defer heavy updates until after modal close animation completes.
+        setTimeout(() => {
+          resetProductForm();
+          loadProducts();
+        }, 450);
+      } else {
+        resetProductForm();
+        // Update local list directly to avoid reloading large payloads after each save.
+        setProducts((prev) => {
+          if (editingProductId) {
+            return prev.map((item) => (item.id === editingProductId ? savedProduct : item));
+          }
+          return [savedProduct, ...prev];
+        });
+      }
+
+      if (editingProductId) {
+        showSuccessAlertAfterModalClose('Product updated successfully');
+      } else {
+        showSuccessAlertAfterModalClose('Product added successfully');
+      }
     } catch (error) {
       console.error('Failed to save product:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save product';
@@ -359,6 +446,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
 
       const productData = {
         name: product.product_name || 'Unknown Product',
+        brand: product.brands || '',
         price: 0, // Default price, admin can edit later
         description: product.ingredients_text || '',
         category: fetchedCategory,
@@ -368,8 +456,11 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
       };
 
       await productAPI.createProduct(productData);
-      showAppAlert('Success', `${productData.name} imported successfully`);
+      setIsImportModalVisible(false);
+      setImportResults([]);
+      setImportQuery('');
       loadProducts();
+      showImportSuccessAfterModalClose(`${productData.name} imported successfully`);
     } catch (error) {
       console.error('Failed to import product:', error);
       showAppAlert('Error', 'Failed to import product');
@@ -412,6 +503,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               setEditingProductId(null);
               setNewProduct({
                 name: '',
+                brand: '',
                 price: '',
                 description: '',
                 category: 'produce',
@@ -447,6 +539,7 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
               <View style={styles.productHeader}>
                 <View style={styles.productLeft}>
                   <Text style={styles.productName}>{product.name}</Text>
+                  <Text style={styles.productVendor}>{product.brand || 'Unknown Brand'}</Text>
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>{getCategoryName(product.category)}</Text>
                   </View>
@@ -554,6 +647,16 @@ export default function AdminDashboardScreen({ navigation, route }: any) {
                   placeholder="Enter product name"
                   value={newProduct.name}
                   onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Brand</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Coca-Cola"
+                  value={newProduct.brand}
+                  onChangeText={(text) => setNewProduct({ ...newProduct, brand: text })}
                 />
               </View>
 

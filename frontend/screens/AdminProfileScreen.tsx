@@ -160,17 +160,19 @@ export default function AdminProfileScreen({ navigation }: any) {
               <View style={styles.settingIcon}>
                 <Ionicons name="contrast-outline" size={20} color={theme.primary} />
               </View>
-              <View>
+              <View style={styles.settingTextWrap}>
                 <Text style={styles.settingLabel}>High Contrast</Text>
                 <Text style={styles.settingHint}>Improve readability with stronger colors</Text>
               </View>
             </View>
-            <Switch
-              value={highContrast}
-              onValueChange={setHighContrast}
-              trackColor={{ false: '#cbd5e1', true: theme.primary }}
-              thumbColor="#ffffff"
-            />
+            <View style={styles.settingSwitchWrap}>
+              <Switch
+                value={highContrast}
+                onValueChange={setHighContrast}
+                trackColor={{ false: '#cbd5e1', true: theme.primary }}
+                thumbColor="#ffffff"
+              />
+            </View>
           </View>
 
           <View style={styles.settingRow}>
@@ -178,17 +180,19 @@ export default function AdminProfileScreen({ navigation }: any) {
               <View style={styles.settingIcon}>
                 <Ionicons name="speedometer-outline" size={20} color={theme.primary} />
               </View>
-              <View>
+              <View style={styles.settingTextWrap}>
                 <Text style={styles.settingLabel}>Reduce Motion</Text>
                 <Text style={styles.settingHint}>Reduce animated effects for visual comfort</Text>
               </View>
             </View>
-            <Switch
-              value={reduceMotion}
-              onValueChange={setReduceMotion}
-              trackColor={{ false: '#cbd5e1', true: theme.primary }}
-              thumbColor="#ffffff"
-            />
+            <View style={styles.settingSwitchWrap}>
+              <Switch
+                value={reduceMotion}
+                onValueChange={setReduceMotion}
+                trackColor={{ false: '#cbd5e1', true: theme.primary }}
+                thumbColor="#ffffff"
+              />
+            </View>
           </View>
         </View>
 
@@ -228,17 +232,19 @@ export default function AdminProfileScreen({ navigation }: any) {
               <View style={styles.settingIcon}>
                 <Ionicons name="scan-outline" size={20} color={theme.primary} />
               </View>
-              <View>
+              <View style={styles.settingTextWrap}>
                 <Text style={styles.settingLabel}>Scan Auto Fill And Exit</Text>
                 <Text style={styles.settingHint}>Fill barcode and close scanner after admin scan</Text>
               </View>
             </View>
-            <Switch
-              value={adminScanAutoFillAndExit}
-              onValueChange={handleToggleAdminScanAutoFill}
-              trackColor={{ false: '#cbd5e1', true: theme.primary }}
-              thumbColor="#ffffff"
-            />
+            <View style={styles.settingSwitchWrap}>
+              <Switch
+                value={adminScanAutoFillAndExit}
+                onValueChange={handleToggleAdminScanAutoFill}
+                trackColor={{ false: '#cbd5e1', true: theme.primary }}
+                thumbColor="#ffffff"
+              />
+            </View>
           </View>
 
           <View style={styles.settingRow}>
@@ -246,17 +252,19 @@ export default function AdminProfileScreen({ navigation }: any) {
               <View style={styles.settingIcon}>
                 <Ionicons name="flash-outline" size={20} color={theme.primary} />
               </View>
-              <View>
+              <View style={styles.settingTextWrap}>
                 <Text style={styles.settingLabel}>Auto Fetch After Scan</Text>
                 <Text style={styles.settingHint}>Automatically fetch product data after barcode scan</Text>
               </View>
             </View>
-            <Switch
-              value={autoFetchAfterScan}
-              onValueChange={handleToggleAutoFetch}
-              trackColor={{ false: '#cbd5e1', true: theme.primary }}
-              thumbColor="#ffffff"
-            />
+            <View style={styles.settingSwitchWrap}>
+              <Switch
+                value={autoFetchAfterScan}
+                onValueChange={handleToggleAutoFetch}
+                trackColor={{ false: '#cbd5e1', true: theme.primary }}
+                thumbColor="#ffffff"
+              />
+            </View>
           </View>
         </View>
 
@@ -390,15 +398,27 @@ const createStyles = (theme: any, getFontSize: (baseSize: number) => number) => 
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   settingLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flex: 1,
+    marginRight: 12,
+    flexShrink: 1,
+  },
+  settingTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  settingSwitchWrap: {
+    width: 56,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   settingIcon: {
     width: 36,
@@ -417,6 +437,7 @@ const createStyles = (theme: any, getFontSize: (baseSize: number) => number) => 
     fontSize: getFontSize(12),
     color: theme.textSecondary,
     marginTop: 2,
+    flexShrink: 1,
   },
   logoutButton: {
     flexDirection: 'row',

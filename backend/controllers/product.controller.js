@@ -21,7 +21,10 @@ const normalizeBarcode = (barcode) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await pool.query("SELECT * FROM products");
+    const includeUnpriced = req?.query?.include_unpriced === "true";
+    const products = includeUnpriced
+      ? await pool.query("SELECT * FROM products")
+      : await pool.query("SELECT * FROM products WHERE price > 0");
     res.status(200).json(repairTextEncodingDeep(products.rows));
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -63,7 +66,6 @@ const createProduct = async (req, res) => {
       name,
       description,
       brand,
-      picture,
       category,
       nutrition_grade,
       nutritional_info,
@@ -92,7 +94,7 @@ const createProduct = async (req, res) => {
         price,
         sanitizedProduct.description,
         sanitizedProduct.brand,
-        sanitizedProduct.picture,
+        picture,
         sanitizedProduct.category,
         normalizedBarcode,
         sanitizedProduct.nutrition_grade,
@@ -108,6 +110,7 @@ const createProduct = async (req, res) => {
 };
 
 const updateProduct = async (req, res) => {
+  const updateStartedAt = Date.now();
   try {
     const { id } = req.params;
     const {
@@ -128,7 +131,6 @@ const updateProduct = async (req, res) => {
       name,
       description,
       brand,
-      picture,
       category,
       nutrition_grade,
       nutritional_info,
@@ -158,7 +160,7 @@ const updateProduct = async (req, res) => {
         price,
         sanitizedProduct.description,
         sanitizedProduct.brand,
-        sanitizedProduct.picture,
+        picture,
         sanitizedProduct.category,
         normalizedBarcode,
         sanitizedProduct.nutrition_grade,
@@ -171,8 +173,10 @@ const updateProduct = async (req, res) => {
     if (updatedProduct.rows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
+    console.log(`updateProduct id=${id} finished in ${Date.now() - updateStartedAt}ms`);
     res.status(200).json(repairTextEncodingDeep(updatedProduct.rows[0]));
   } catch (error) {
+    console.error(`updateProduct failed after ${Date.now() - updateStartedAt}ms`, error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
