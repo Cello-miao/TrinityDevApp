@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const path = require("path");
+const bcrypt = require("bcrypt");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const pool = require("./config/db");
 
@@ -89,11 +90,42 @@ app.get("/api/test", (req, res) => {
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0"; // Listen on all network interfaces
 
+const ensureAdminUser = async () => {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@trinity.com";
+  const adminUsername = process.env.ADMIN_USERNAME || "admin";
+  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+
+  try {
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [
+      adminEmail,
+    ]);
+
+    if (existing.rows.length > 0) {
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(adminPassword, salt);
+
+    await pool.query(
+      `INSERT INTO users (username, email, password_hash, first_name, last_name, role)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (email) DO NOTHING`,
+      [adminUsername, adminEmail, passwordHash, "Admin", "User", "admin"],
+    );
+
+    console.log(`Admin user ensured for ${adminEmail}`);
+  } catch (error) {
+    console.error("Failed to ensure admin user:", error.message);
+  }
+};
+
 pool.query("SELECT NOW()", (err, res) => {
   if (err) {
     console.log("Database connection failed", err);
   } else {
     console.log("Database connected successfully");
+    ensureAdminUser();
   }
 });
 

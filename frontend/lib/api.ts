@@ -41,6 +41,22 @@ const getApiBaseUrl = (): string => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+const API_REQUEST_TIMEOUT_MS = 15000;
+
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = API_REQUEST_TIMEOUT_MS,
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 // Data transformation function: convert backend product data to frontend Product type
 const transformProduct = (dbProduct: any): Product => {
@@ -125,6 +141,33 @@ const transformOrder = (dbOrder: any): Order => {
   };
 };
 
+// Internal refresh function to avoid circular dependency
+const refreshTokenRequest = async (): Promise<string | null> => {
+  try {
+    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    if (!refreshToken) return null;
+
+    const baseUrl = API_BASE_URL.replace("/api", "");
+    const response = await fetch(`${baseUrl}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      await AsyncStorage.multiRemove(["user", "cart", "token", "refreshToken"]);
+      return null;
+    }
+
+    const data = await response.json();
+    await AsyncStorage.setItem("token", data.token);
+    await AsyncStorage.setItem("refreshToken", data.refreshToken);
+    return data.token;
+  } catch {
+    return null;
+  }
+};
+
 // API request helper function
 const apiRequest = async (
   endpoint: string,
@@ -143,42 +186,58 @@ const apiRequest = async (
     }
 
     const url = `${API_BASE_URL}${endpoint}`;
-    console.log('API Request:', { url, method: options.method || 'GET' });
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
+    const response = await fetchWithTimeout(url, { ...options, headers });
     const data = await response.json();
-    
-    console.log('API Response:', { status: response.status, data });
+
+    if (response.status === 401) {
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        headers["Authorization"] = `Bearer ${newToken}`;
+        const retryResponse = await fetchWithTimeout(url, {
+          ...options,
+          headers,
+        });
+        const retryData = await retryResponse.json();
+
+        if (!retryResponse.ok) {
+          throw new Error(
+            retryData.message ||
+              `API request failed with status ${retryResponse.status}`,
+          );
+        }
+
+        return retryData;
+      }
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || `API request failed with status ${response.status}`);
+      throw new Error(
+        data.message || `API request failed with status ${response.status}`,
+      );
     }
 
     return data;
   } catch (error) {
-    console.error('API request error:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-    }
     throw error;
   }
 };
 
 // Authentication API
 export const authAPI = {
-  login: async (email: string, password: string): Promise<{ token: string; user: User }> => {
+  login: async (
+    email: string,
+    password: string,
+  ): Promise<{ token: string; refreshToken: string; user: User }> => {
     const data = await apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
-    // Backend returns { message, token }, need to decode user info from token
+
     if (data.token) {
       await AsyncStorage.setItem('token', data.token);
+      if (data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      }
 
       let user: User;
       try {
@@ -194,16 +253,19 @@ export const authAPI = {
       }
 
       await AsyncStorage.setItem('user', JSON.stringify(user));
-      
-      return { token: data.token, user };
+
+      return { token: data.token, refreshToken: data.refreshToken, user };
     }
     
     throw new Error('Login failed');
   },
 
-  register: async (name: string, email: string, phone: string, password: string): Promise<{ token: string; user: User }> => {
-    console.log('API: Registering user with:', { name, email, phone });
-    
+  register: async (
+    name: string,
+    email: string,
+    phone: string,
+    password: string,
+  ): Promise<{ token: string; refreshToken: string; user: User }> => {
     const requestBody = { 
       username: email.split('@')[0],
       email, 
@@ -212,20 +274,13 @@ export const authAPI = {
       first_name: name.split(' ')[0] || name,
       last_name: name.split(' ')[1] || '',
     };
-    
-    console.log('API: Request body:', requestBody);
-    
+
     const data = await apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
-    
-    console.log('API: Register response:', data);
-    
-    // Backend returns { message, user }
+
     if (data.user) {
-      // Auto-login after registration
-      console.log('API: Auto-logging in after registration');
       const loginData = await authAPI.login(email, password);
       return loginData;
     }

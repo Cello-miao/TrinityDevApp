@@ -138,3 +138,14 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens ("userId");
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens (token);
+
+INSERT INTO users (username, email, password_hash, first_name, last_name, role)
+VALUES (
+  'admin',
+  'admin@trinity.com',
+  '$2b$10$YCg/5t.ADYw8dFY6WCSW8uKSbnlpV0qYHgYr7HL/yFf/Vy9AO6iJK',
+  'Admin',
+  'User',
+  'admin'
+)
+ON CONFLICT (email) DO NOTHING;
