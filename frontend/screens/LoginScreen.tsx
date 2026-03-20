@@ -154,9 +154,6 @@ export default function LoginScreen({ navigation }: any) {
                   size={13}
                   color="rgba(255,255,255,0.5)"
                 />
-                <Text style={styles.adminHintText}>
-                  Admin: admin@trinity.com / admin123
-                </Text>
               </View>
             </View>
           </KeyboardAvoidingView>
