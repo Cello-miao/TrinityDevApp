@@ -21,7 +21,7 @@ const normalizeBarcode = (barcode) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const includeUnpriced = req.query.include_unpriced === "true";
+    const includeUnpriced = req?.query?.include_unpriced === "true";
     const products = includeUnpriced
       ? await pool.query("SELECT * FROM products")
       : await pool.query("SELECT * FROM products WHERE price > 0");
