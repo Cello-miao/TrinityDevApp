@@ -44,6 +44,7 @@ describe('frontend api module', () => {
           id: 1,
           name: 'Milk',
           price: '4.5',
+          brand: 'Lactel',
           category: 'Dairy',
           picture: 'milk.png',
           description: 'fresh',
@@ -62,6 +63,7 @@ describe('frontend api module', () => {
         image: 'milk.png',
         stock: 7,
         price: 4.5,
+        brand: 'Lactel',
       }),
     );
   });
@@ -275,6 +277,7 @@ describe('frontend api module', () => {
           id: 4,
           name: 'Orange Juice',
           price: '3.2',
+          brand: 'Tropicana',
           picture: 'oj.png',
           quantity: 5,
           barcode: '12345',
@@ -295,6 +298,7 @@ describe('frontend api module', () => {
         id: '4',
         image: 'oj.png',
         stock: 5,
+        brand: 'Tropicana',
       }),
     );
   });
