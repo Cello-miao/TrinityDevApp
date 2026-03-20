@@ -116,7 +116,6 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id);
 
--- Favorites table for user favorite products
 CREATE TABLE IF NOT EXISTS favorites (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -127,3 +126,15 @@ CREATE TABLE IF NOT EXISTS favorites (
 
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites (user_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_product_id ON favorites (product_id);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  "userId" INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  "expiresAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens ("userId");
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens (token);
