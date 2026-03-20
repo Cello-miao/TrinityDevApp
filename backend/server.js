@@ -90,6 +90,30 @@ app.get("/api/test", (req, res) => {
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0"; // Listen on all network interfaces
 
+const ensureRefreshTokenTable = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id SERIAL PRIMARY KEY,
+        "userId" INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        "expiresAt" TIMESTAMP WITH TIME ZONE NOT NULL,
+        "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      )
+    `);
+
+    await pool.query(
+      'CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens ("userId")',
+    );
+    await pool.query(
+      "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens (token)",
+    );
+  } catch (error) {
+    console.error("Failed to ensure refresh_tokens table:", error.message);
+  }
+};
+
 const ensureAdminUser = async () => {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@trinity.com";
   const adminUsername = process.env.ADMIN_USERNAME || "admin";
@@ -125,7 +149,7 @@ pool.query("SELECT NOW()", (err, res) => {
     console.log("Database connection failed", err);
   } else {
     console.log("Database connected successfully");
-    ensureAdminUser();
+    ensureRefreshTokenTable().then(() => ensureAdminUser());
   }
 });
 
