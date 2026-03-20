@@ -3,9 +3,6 @@ import Constants from "expo-constants";
 import { NativeModules, Platform } from "react-native";
 import { Order, Product, User } from "../types";
 
-// Configure API base URL - adjust according to your environment
-// For Android emulator: use 10.0.2.2 to access host localhost
-// For iOS simulator/device: use your computer's IP address
 const getApiBaseUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_BASE_URL) {
     return process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -33,7 +30,6 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Data transformation function: convert backend product data to frontend Product type
 const transformProduct = (dbProduct: any): Product => {
   return {
     id: dbProduct.id?.toString() || "",
@@ -44,10 +40,10 @@ const transformProduct = (dbProduct: any): Product => {
     description: dbProduct.description || "",
     barcode: dbProduct.barcode || "",
     stock: dbProduct.quantity || 0,
+    discount: parseFloat(dbProduct.discount_percentage) || 0,
   };
 };
 
-// Data transformation function: convert backend user data to frontend User type
 const transformUser = (dbUser: any): User => {
   return {
     id: dbUser.id?.toString() || "",
@@ -98,7 +94,33 @@ const transformOrder = (dbOrder: any): Order => {
   };
 };
 
-// API request helper function
+// Internal refresh function to avoid circular dependency
+const refreshTokenRequest = async (): Promise<string | null> => {
+  try {
+    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    if (!refreshToken) return null;
+
+    const baseUrl = API_BASE_URL.replace("/api", "");
+    const response = await fetch(`${baseUrl}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      await AsyncStorage.multiRemove(["user", "cart", "token", "refreshToken"]);
+      return null;
+    }
+
+    const data = await response.json();
+    await AsyncStorage.setItem("token", data.token);
+    await AsyncStorage.setItem("refreshToken", data.refreshToken);
+    return data.token;
+  } catch {
+    return null;
+  }
+};
+
 const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
@@ -116,16 +138,25 @@ const apiRequest = async (
     }
 
     const url = `${API_BASE_URL}${endpoint}`;
-    console.log("API Request:", { url, method: options.method || "GET" });
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
+    const response = await fetch(url, { ...options, headers });
     const data = await response.json();
 
-    console.log("API Response:", { status: response.status, data });
+    // Token expired — try to refresh
+    if (response.status === 401) {
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        headers["Authorization"] = `Bearer ${newToken}`;
+        const retryResponse = await fetch(url, { ...options, headers });
+        const retryData = await retryResponse.json();
+        if (!retryResponse.ok) {
+          throw new Error(
+            retryData.message ||
+              `API request failed with status ${retryResponse.status}`,
+          );
+        }
+        return retryData;
+      }
+    }
 
     if (!response.ok) {
       throw new Error(
@@ -135,10 +166,6 @@ const apiRequest = async (
 
     return data;
   } catch (error) {
-    console.error("API request error:", error);
-    if (error instanceof Error) {
-      console.error("Error details:", error.message);
-    }
     throw error;
   }
 };
@@ -148,15 +175,17 @@ export const authAPI = {
   login: async (
     email: string,
     password: string,
-  ): Promise<{ token: string; user: User }> => {
+  ): Promise<{ token: string; refreshToken: string; user: User }> => {
     const data = await apiRequest("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
 
-    // Backend returns { message, token }, need to decode user info from token
     if (data.token) {
       await AsyncStorage.setItem("token", data.token);
+      if (data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      }
 
       let user: User;
       try {
@@ -165,17 +194,11 @@ export const authAPI = {
         });
         user = transformUser(profileData);
       } catch {
-        user = {
-          id: "temp",
-          name: email.split("@")[0],
-          email,
-          role: "user",
-        };
+        user = { id: "temp", name: email.split("@")[0], email, role: "user" };
       }
 
       await AsyncStorage.setItem("user", JSON.stringify(user));
-
-      return { token: data.token, user };
+      return { token: data.token, refreshToken: data.refreshToken, user };
     }
 
     throw new Error("Login failed");
@@ -186,9 +209,7 @@ export const authAPI = {
     email: string,
     phone: string,
     password: string,
-  ): Promise<{ token: string; user: User }> => {
-    console.log("API: Registering user with:", { name, email, phone });
-
+  ): Promise<{ token: string; refreshToken: string; user: User }> => {
     const requestBody = {
       username: email.split("@")[0],
       email,
@@ -198,19 +219,12 @@ export const authAPI = {
       last_name: name.split(" ")[1] || "",
     };
 
-    console.log("API: Request body:", requestBody);
-
     const data = await apiRequest("/auth/register", {
       method: "POST",
       body: JSON.stringify(requestBody),
     });
 
-    console.log("API: Register response:", data);
-
-    // Backend returns { message, user }
     if (data.user) {
-      // Auto-login after registration
-      console.log("API: Auto-logging in after registration");
       const loginData = await authAPI.login(email, password);
       return loginData;
     }
@@ -219,7 +233,6 @@ export const authAPI = {
   },
 };
 
-// Product API
 export const productAPI = {
   getAllProducts: async (): Promise<Product[]> => {
     const data = await apiRequest("/products", { method: "GET" });
@@ -240,6 +253,7 @@ export const productAPI = {
       category: product.category,
       barcode: product.barcode,
       quantity: product.stock,
+      discount_percentage: product.discount || 0,
     };
     const data = await apiRequest("/products", {
       method: "POST",
@@ -260,6 +274,7 @@ export const productAPI = {
       category: product.category,
       barcode: product.barcode,
       quantity: product.stock,
+      discount_percentage: product.discount || 0,
     };
     const data = await apiRequest(`/products/${id}`, {
       method: "PUT",
@@ -287,7 +302,6 @@ export const productAPI = {
   },
 };
 
-// Cart API
 export const cartAPI = {
   getCart: async (): Promise<any> => {
     const data = await apiRequest("/cart", { method: "GET" });
@@ -295,14 +309,7 @@ export const cartAPI = {
   },
 
   addToCart: async (productId: string, quantity: number): Promise<any> => {
-    console.log("cartAPI.addToCart called with:", {
-      productId,
-      quantity,
-      productIdType: typeof productId,
-    });
     const productIdNum = Number(productId);
-    console.log("Converted to number:", productIdNum);
-
     const data = await apiRequest("/cart/add", {
       method: "POST",
       body: JSON.stringify({ product_id: productIdNum, quantity }),
@@ -330,7 +337,6 @@ export const cartAPI = {
   },
 };
 
-// Order API
 export const orderAPI = {
   createOrder: async (payload: {
     items: Array<{ product_id: number; quantity: number }>;
@@ -351,31 +357,23 @@ export const orderAPI = {
 
   getMyOrders: async (): Promise<Order[]> => {
     const data = await apiRequest("/orders/me", { method: "GET" });
-    if (!Array.isArray(data)) {
-      console.error("getMyOrders: Expected array but got:", typeof data);
-      return [];
-    }
+    if (!Array.isArray(data)) return [];
     return data.map(transformOrder);
   },
 
   getAllOrders: async (): Promise<Order[]> => {
     const data = await apiRequest("/orders", { method: "GET" });
-    if (!Array.isArray(data)) {
-      console.error("getAllOrders: Expected array but got:", typeof data);
-      return [];
-    }
+    if (!Array.isArray(data)) return [];
     return data.map(transformOrder);
   },
 };
 
-// Scanner API
 export const scannerAPI = {
   lookupByBarcode: async (barcode: string): Promise<Product> => {
     const data = await apiRequest("/scanner/lookup", {
       method: "POST",
       body: JSON.stringify({ barcode }),
     });
-
     return transformProduct(data.product);
   },
 };

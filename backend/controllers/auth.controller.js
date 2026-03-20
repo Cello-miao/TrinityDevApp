@@ -23,7 +23,7 @@ const saveRefreshToken = async (userId, token) => {
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
 
   await pool.query(
-    `INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+    `INSERT INTO refresh_tokens ("userId", token, "expiresAt", "createdAt", "updatedAt") VALUES ($1, $2, $3, NOW(), NOW())`,
     [userId, token, expiresAt],
   );
 };
@@ -109,7 +109,7 @@ const refresh = async (req, res) => {
     const result = await pool.query(
       `SELECT rt.*, u.id as user_id, u.email, u.role 
        FROM refresh_tokens rt 
-       JOIN users u ON u.id = rt.user_id 
+       JOIN users u ON u.id = rt."userId" 
        WHERE rt.token = $1`,
       [refreshToken],
     );
@@ -120,7 +120,7 @@ const refresh = async (req, res) => {
 
     const tokenRow = result.rows[0];
 
-    if (new Date() > new Date(tokenRow.expires_at)) {
+    if (new Date() > new Date(tokenRow.expiresAt)) {
       await pool.query("DELETE FROM refresh_tokens WHERE token = $1", [
         refreshToken,
       ]);
