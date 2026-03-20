@@ -149,11 +149,7 @@ export default function LoginScreen({ navigation }: any) {
               </TouchableOpacity>
 
               <View style={styles.adminHint}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={13}
-                  color="rgba(255,255,255,0.5)"
-                />
+                <Ionicons size={13} color="rgba(255,255,255,0.5)" />
               </View>
             </View>
           </KeyboardAvoidingView>
