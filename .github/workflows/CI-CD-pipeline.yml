@@ -97,6 +97,7 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_PORT: ${{ secrets.DB_PORT }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
           PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
           PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
           PAYPAL_MODE: ${{ secrets.PAYPAL_MODE }}
@@ -107,7 +108,7 @@ jobs:
           host: ${{ secrets.EC2_HOST_PROD || secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER_PROD || secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY_PROD || secrets.EC2_SSH_KEY }}
-          envs: DOCKERHUB_USERNAME,IMAGE_TAG,DB_USER,DB_PASSWORD,DB_NAME,DB_PORT,JWT_SECRET,PAYPAL_CLIENT_ID,PAYPAL_CLIENT_SECRET,PAYPAL_MODE,PAYPAL_RETURN_URL,PAYPAL_CANCEL_URL,CORS_ORIGINS
+          envs: DOCKERHUB_USERNAME,IMAGE_TAG,DB_USER,DB_PASSWORD,DB_NAME,DB_PORT,JWT_SECRET,REFRESH_TOKEN_SECRET,PAYPAL_CLIENT_ID,PAYPAL_CLIENT_SECRET,PAYPAL_MODE,PAYPAL_RETURN_URL,PAYPAL_CANCEL_URL,CORS_ORIGINS
           script: |
             set -e
             mkdir -p ~/trinity-deploy
@@ -145,6 +146,7 @@ jobs:
             upsert_env DB_NAME                "${DB_NAME}"
             upsert_env DB_PORT                "${DB_PORT}"
             upsert_env JWT_SECRET             "${JWT_SECRET}"
+            upsert_env REFRESH_TOKEN_SECRET   "${REFRESH_TOKEN_SECRET}"
             upsert_env PAYPAL_CLIENT_ID       "${PAYPAL_CLIENT_ID}"
             upsert_env PAYPAL_CLIENT_SECRET   "${PAYPAL_CLIENT_SECRET}"
             upsert_env PAYPAL_MODE            "${PAYPAL_MODE}"
