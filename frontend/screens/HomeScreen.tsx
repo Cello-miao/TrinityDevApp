@@ -353,12 +353,12 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.quickBtn}
             onPress={() => navigation.navigate("Scanner")}
             accessibilityRole="button"
-            accessibilityLabel="Scan a product"
+            accessibilityLabel="Scan"
           >
             <View style={[styles.quickIcon, { backgroundColor: theme.border }]}>
               <Ionicons name="scan-outline" size={24} color={theme.primaryDark} />
             </View>
-            <Text style={styles.quickLabel}>Scan Product</Text>
+            <Text style={styles.quickLabel}>Scan</Text>
             <Text style={styles.quickHint}>Find a product instantly by barcode</Text>
           </TouchableOpacity>
         </View>
