@@ -87,7 +87,7 @@ const transformProduct = (dbProduct: any): Product => {
     barcode: dbProduct.barcode || '',
     stock: dbProduct.quantity || 0,
     discount: parseFloat(dbProduct.discount_percentage) || 0,
-    brand: dbProduct.brand || '',
+    brand: dbProduct.brand || dbProduct.brands || '',
     nutritionalInfo,
   };
 };
@@ -291,8 +291,9 @@ export const authAPI = {
 
 // Product API
 export const productAPI = {
-  getAllProducts: async (): Promise<Product[]> => {
-    const data = await apiRequest('/products', { method: 'GET' });
+  getAllProducts: async (includeUnpriced: boolean = false): Promise<Product[]> => {
+    const endpoint = includeUnpriced ? '/products?include_unpriced=true' : '/products';
+    const data = await apiRequest(endpoint, { method: 'GET' });
     return data.map(transformProduct);
   },
 
@@ -310,6 +311,7 @@ export const productAPI = {
       picture: product.image,
       category: product.category,
       barcode: product.barcode,
+      nutritional_info: product.nutritionalInfo,
       quantity: product.stock,
       discount_percentage: product.discount || 0,
     };
@@ -329,6 +331,7 @@ export const productAPI = {
       picture: product.image,
       category: product.category,
       barcode: product.barcode,
+      nutritional_info: product.nutritionalInfo,
       quantity: product.stock,
       discount_percentage: product.discount || 0,
     };
