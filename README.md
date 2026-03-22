@@ -18,7 +18,7 @@ FreshCart is a professional-grade full-stack mobile application developed for a 
 - `main`: production branch — contains client-ready, release-tested code. The `documents/` directory lives in `main` and holds high-level project artifacts (architecture and design documents, diagrams, and exported PDFs) used for production handoff and audits.
 - `dev`: development branch — active feature work, experiments, and integration testing. Developers should base daily work on `dev` and open pull requests into `main` when a feature is release-ready.
 
-`documents/` (in `main`) contains:
+`documents/` contains:
 - Architecture and system diagrams (UML, class diagrams)
 - Activity and data-flow diagrams
 - Technology choices and design rationale
