@@ -348,6 +348,21 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickBtn}
+            onPress={() => navigation.navigate("Scanner")}
+            accessibilityRole="button"
+            accessibilityLabel="Scan"
+          >
+            <View style={[styles.quickIcon, { backgroundColor: theme.border }]}>
+              <Ionicons name="scan-outline" size={24} color={theme.primaryDark} />
+            </View>
+            <Text style={styles.quickLabel}>Scan</Text>
+            <Text style={styles.quickHint}>Find a product instantly by barcode</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.section}>
     
           <TouchableOpacity
@@ -631,21 +646,40 @@ const createStyles = (theme: any) =>
     quickActions: {
       flexDirection: "row",
       paddingHorizontal: 16,
-      paddingVertical: 16,
-      gap: 12,
+      paddingVertical: 10,
       backgroundColor: theme.card,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
-    quickBtn: { flex: 1, alignItems: "center", gap: 6 },
+    quickBtn: {
+      width: "100%",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 9,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.background,
+    },
     quickIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 14,
+      width: 42,
+      height: 42,
+      borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
     },
-    quickLabel: { fontSize: 11, color: theme.textSecondary, fontWeight: "600" },
+    quickLabel: {
+      fontSize: 15,
+      color: theme.text,
+      fontWeight: "700",
+    },
+    quickHint: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      flex: 1,
+    },
     section: { marginTop: 24, paddingHorizontal: 16 },
     sectionHeader: {
       flexDirection: "row",
