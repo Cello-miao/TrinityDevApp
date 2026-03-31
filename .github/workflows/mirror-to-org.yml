@@ -3,8 +3,8 @@ name: Mirror to Epitech Organization
 on:
   # Scheduled synchronization keeps the destination repository aligned,
   # even when no qualifying CI/CD workflow_run event occurs.
-  schedule:
-    - cron: '0 0 */2 * *'
+  #schedule:
+  #  - cron: '0 0 */2 * *'
 
   # Event-driven synchronization: trigger when CI/CD pipeline completes
   # on either long-lived branch.
